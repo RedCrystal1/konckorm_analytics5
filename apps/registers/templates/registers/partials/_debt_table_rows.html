@@ -1,0 +1,49 @@
+{% load humanize %}
+<table class="table table-hover table-sm mb-0">
+<thead class="table-light">
+    <tr>
+        <th>Контрагент</th>
+        <th>Документ</th>
+        <th>Дата</th>
+        <th>Срок оплаты</th>
+        <th class="text-end">Сумма</th>
+        <th class="text-end">Просрочка</th>
+        <th>Дней</th>
+        <th>Статус</th>
+        <th>Менеджер</th>
+    </tr>
+</thead>
+<tbody>
+{% for r in records %}
+<tr class="{% if r.source_document.is_paid %}table-success{% elif r.status == 'current' and r.days_until_due <= 3 and r.days_until_due >= 0 %}table-warning{% elif r.status == 'current' %}{% elif r.overdue_days <= 60 %}table-warning{% else %}table-danger{% endif %}"
+    onclick="window.location='{% url 'registers:debt_detail' r.pk %}'" style="cursor:pointer">
+    <td>
+        {{ r.counterparty.name|truncatechars:25 }}
+        {% if r.counterparty.is_key_supplier %}<span class="badge bg-warning text-dark" title="Ключевой поставщик">★</span>{% endif %}
+    </td>
+    <td>{{ r.source_document.number }}</td>
+    <td>{{ r.source_document.date|date:"d.m.Y" }}</td>
+    <td>{{ r.planned_payment_date|date:"d.m.Y" }}</td>
+    <td class="text-end">{{ r.amount_rub|floatformat:0|intcomma }}</td>
+    <td class="text-end">{% if r.overdue_amount > 0 %}{{ r.overdue_amount|floatformat:0|intcomma }}{% else %}—{% endif %}</td>
+    <td class="fw-bold {% if r.overdue_days > 60 %}text-danger{% elif r.overdue_days > 0 %}text-warning{% endif %}">
+        {% if r.overdue_days > 0 %}{{ r.overdue_days }}{% elif r.status == 'current' %}—{% endif %}
+    </td>
+    <td>
+        {% if r.source_document.is_paid %}<span class="badge bg-success">Оплачен</span>
+        {% elif r.status == 'current' and r.days_until_due <= 3 and r.days_until_due >= 0 %}<span class="badge" style="background:#fff3cd;color:#664d03">Скоро ({{ r.days_until_due }} дн.)</span>
+        {% elif r.status == 'current' %}<span class="badge bg-info text-dark">Текущая</span>
+        {% elif r.status == 'overdue_30' %}<span class="badge bg-warning text-dark">до 30 дн.</span>
+        {% elif r.status == 'overdue_60' %}<span class="badge bg-warning text-dark">30–60 дн.</span>
+        {% elif r.status == 'overdue_90' %}<span class="badge bg-danger">60–90 дн.</span>
+        {% elif r.status == 'overdue_90_plus' %}<span class="badge bg-danger">90+ дн.</span>
+        {% elif r.status == 'doubtful' %}<span class="badge bg-dark">Сомнит.</span>
+        {% endif %}
+    </td>
+    <td class="small">{{ r.responsible_manager|default:"—" }}</td>
+</tr>
+{% empty %}
+<tr><td colspan="9" class="text-muted text-center py-3">Нет записей</td></tr>
+{% endfor %}
+</tbody>
+</table>

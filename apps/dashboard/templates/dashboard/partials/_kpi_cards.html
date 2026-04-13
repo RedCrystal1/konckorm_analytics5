@@ -1,0 +1,93 @@
+{% load humanize %}
+<div class="row g-3">
+    <div class="col-6 col-xl-2">
+        <div class="card border-start border-4 border-primary h-100">
+            <div class="card-body py-2 px-3">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="text-muted small">Общая КЗ</div>
+                        <h5 class="mb-0 mt-1">{{ kpi.total_debt|floatformat:0|intcomma }} <small class="text-muted">₽</small></h5>
+                    </div>
+                    <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:36px;height:36px;background:rgba(44,90,160,0.1)">
+                        <i class="bi bi-wallet2 text-primary"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-xl-2">
+        <div class="card border-start border-4 border-{{ kpi.overdue_color }} h-100">
+            <div class="card-body py-2 px-3">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="text-muted small">Просроченная КЗ</div>
+                        <h5 class="mb-0 mt-1 text-{{ kpi.overdue_color }}">{{ kpi.overdue_debt|floatformat:0|intcomma }} <small>₽</small></h5>
+                    </div>
+                    <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:36px;height:36px;background:rgba(239,68,68,0.1)">
+                        <i class="bi bi-clock-history text-danger"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-xl-2">
+        <div class="card border-start border-4 border-{{ kpi.overdue_color }} h-100">
+            <div class="card-body py-2 px-3">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="text-muted small">Доля просрочки</div>
+                        <h5 class="mb-0 mt-1 text-{{ kpi.overdue_color }}">{{ kpi.overdue_ratio|floatformat:1 }}%</h5>
+                    </div>
+                    <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:36px;height:36px;background:rgba(245,158,11,0.1)">
+                        <i class="bi bi-pie-chart text-warning"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-xl-2">
+        <div class="card border-start border-4 border-{{ kpi.turnover_color }} h-100">
+            <div class="card-body py-2 px-3">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="text-muted small">Оборачиваемость КЗ</div>
+                        <h5 class="mb-0 mt-1">{{ kpi.turnover_days|floatformat:0 }} <small class="text-muted">дн.</small></h5>
+                    </div>
+                    <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:36px;height:36px;background:rgba(34,197,94,0.1)">
+                        <i class="bi bi-arrow-repeat text-success"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-xl-2">
+        <div class="card border-start border-4 border-info h-100">
+            <div class="card-body py-2 px-3">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="text-muted small">Доля ключевых</div>
+                        <h5 class="mb-0 mt-1">{{ kpi.key_supplier_share|floatformat:1 }}%</h5>
+                    </div>
+                    <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:36px;height:36px;background:rgba(6,182,212,0.1)">
+                        <i class="bi bi-star text-info"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-xl-2">
+        <div class="card border-start border-4 border-secondary h-100">
+            <div class="card-body py-2 px-3">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="text-muted small">Просроч. документов</div>
+                        <h5 class="mb-0 mt-1">{{ kpi.overdue_count }}</h5>
+                    </div>
+                    <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:36px;height:36px;background:rgba(100,116,139,0.1)">
+                        <i class="bi bi-file-earmark-x text-secondary"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Деактивация пользователя</h2>
+<div class="alert alert-warning mt-3">Вы действительно хотите деактивировать пользователя <strong>{{ user_obj.get_full_name }}</strong>?</div>
+<form method="post">{% csrf_token %}
+<button type="submit" class="btn btn-danger">Деактивировать</button>
+<a href="{% url 'accounts:user_list' %}" class="btn btn-outline-secondary">Отмена</a>
+</form>
+{% endblock %}

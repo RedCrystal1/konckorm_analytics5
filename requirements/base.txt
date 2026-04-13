@@ -1,0 +1,40 @@
+# Django core
+Django>=5.1,<5.2
+psycopg[binary]>=3.1
+gunicorn>=22.0
+
+# Celery
+celery[redis]>=5.4
+django-celery-beat>=2.6
+
+# Cache & Sessions
+django-redis>=5.4
+redis>=5.0
+
+# Forms, Tables, Filters
+django-filter>=24.0
+django-tables2>=2.7
+django-widget-tweaks>=1.5
+
+# Authentication & Security
+django-otp>=1.4
+django-two-factor-auth>=1.16
+argon2-cffi>=23.1
+
+# Audit
+django-auditlog>=3.0
+
+# Import/Export
+django-import-export>=4.0
+openpyxl>=3.1
+lxml>=5.0
+
+# PDF
+WeasyPrint>=62.0
+
+# Storage
+django-storages[boto3]>=1.14
+Pillow>=10.0
+
+# Utilities
+python-dateutil>=2.9

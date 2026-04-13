@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}{{ counterparty.name }}{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>{{ counterparty.name }}</h2>
+    {% if user.is_admin or user.is_accountant %}
+    <a href="{% url 'counterparties:edit' counterparty.pk %}" class="btn btn-outline-primary">Редактировать</a>
+    {% endif %}
+</div>
+
+<div class="row">
+    <!-- Реквизиты -->
+    <div class="col-lg-6">
+        <div class="card mb-3"><div class="card-header"><strong>Реквизиты</strong></div><div class="card-body">
+            <dl class="row mb-0">
+                <dt class="col-4">ИНН</dt><dd class="col-8">{{ counterparty.inn }}</dd>
+                <dt class="col-4">КПП</dt><dd class="col-8">{{ counterparty.kpp|default:"—" }}</dd>
+                <dt class="col-4">Код 1С</dt><dd class="col-8">{{ counterparty.code_1c|default:"—" }}</dd>
+                <dt class="col-4">Юр. адрес</dt><dd class="col-8">{{ counterparty.legal_address|default:"—" }}</dd>
+                <dt class="col-4">Факт. адрес</dt><dd class="col-8">{{ counterparty.actual_address|default:"—" }}</dd>
+                <dt class="col-4">Телефон</dt><dd class="col-8">{{ counterparty.phone|default:"—" }}</dd>
+                <dt class="col-4">Email</dt><dd class="col-8">{{ counterparty.email|default:"—" }}</dd>
+                <dt class="col-4">Контакт</dt><dd class="col-8">{{ counterparty.contact_person|default:"—" }}</dd>
+                <dt class="col-4">Менеджер</dt><dd class="col-8">{{ counterparty.responsible_manager|default:"—" }}</dd>
+                {% if counterparty.is_key_supplier %}<dt class="col-4"></dt><dd class="col-8"><span class="badge bg-warning text-dark">Ключевой поставщик (80% закупок)</span></dd>{% endif %}
+            </dl>
+        </div></div>
+    </div>
+
+    <!-- Сводка задолженности -->
+    <div class="col-lg-6">
+        <div class="card mb-3"><div class="card-header"><strong>Задолженность</strong></div><div class="card-body">
+            <dl class="row mb-0">
+                <dt class="col-6">Общий долг</dt><dd class="col-6 text-end fw-bold">{{ debt_summary.total_debt|floatformat:0|intcomma }} ₽</dd>
+                <dt class="col-6">Просрочено</dt><dd class="col-6 text-end text-danger fw-bold">{{ debt_summary.overdue_amount|floatformat:0|intcomma }} ₽</dd>
+                <dt class="col-6">Неоплач. документов</dt><dd class="col-6 text-end">{{ debt_summary.unpaid_count }}</dd>
+                <dt class="col-6">Просроч. документов</dt><dd class="col-6 text-end">{{ debt_summary.overdue_count }}</dd>
+            </dl>
+        </div></div>
+    </div>
+</div>
+
+<!-- График динамики задолженности -->
+<div class="card mb-3">
+    <div class="card-header"><strong>Динамика задолженности</strong></div>
+    <div class="card-body">
+        {% if debt_history %}
+        <canvas id="cpDebtChart" height="200"></canvas>
+        <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            new Chart(document.getElementById('cpDebtChart'), {
+                type: 'line',
+                data: {
+                    labels: [{% for r in debt_history %}"{{ r.record_date|date:'d.m' }}"{% if not forloop.last %},{% endif %}{% endfor %}],
+                    datasets: [{
+                        label: 'Задолженность',
+                        data: [{% for r in debt_history %}{{ r.amount_rub }}{% if not forloop.last %},{% endif %}{% endfor %}],
+                        borderColor: '#4472C4', backgroundColor: 'rgba(68,114,196,0.1)', fill: true, tension: 0.3
+                    },{
+                        label: 'Просрочка',
+                        data: [{% for r in debt_history %}{{ r.overdue_amount }}{% if not forloop.last %},{% endif %}{% endfor %}],
+                        borderColor: '#dc3545', backgroundColor: 'rgba(220,53,69,0.1)', fill: true, tension: 0.3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { position: 'bottom' } },
+                    scales: { y: { beginAtZero: true } },
+                    onClick: function(e, elements) {
+                        if (elements.length > 0) {
+                            window.location = '{% url "registers:debt_register" %}?counterparty={{ counterparty.pk }}';
+                        }
+                    }
+                }
+            });
+        });
+        </script>
+        {% else %}
+        <p class="text-muted mb-0">Нет данных для графика.</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Договоры -->
+<div class="card mb-3">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <strong>Договоры</strong>
+        <span class="badge bg-secondary">{{ contracts|length }}</span>
+    </div>
+    <div class="card-body p-0">
+        <table class="table table-sm mb-0">
+            <thead><tr><th>Номер</th><th>Дата</th><th>Вид</th><th>Условия оплаты</th><th>Срок (дн.)</th><th>Лимит</th><th>Активен</th></tr></thead>
+            <tbody>
+            {% for c in contracts %}
+            <tr onclick="window.location='{% url 'counterparties:contract_detail' c.pk %}'" style="cursor:pointer">
+                <td>{{ c.number }}</td><td>{{ c.date|date:"d.m.Y" }}</td>
+                <td>{{ c.get_kind_display }}</td><td>{{ c.get_payment_term_type_display }}</td>
+                <td>{{ c.payment_days }}</td><td>{{ c.credit_limit|floatformat:0|intcomma|default:"—" }}</td>
+                <td>{% if c.is_active %}<span class="badge bg-success">Да</span>{% else %}<span class="badge bg-secondary">Нет</span>{% endif %}</td>
+            </tr>
+            {% empty %}<tr><td colspan="7" class="text-muted text-center py-2">Нет договоров</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Последняя сверка -->
+<div class="card mb-3">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <strong>Последняя сверка</strong>
+        {% if user.is_admin or user.is_accountant %}
+        <a href="{% url 'reconciliation:generate_act' %}" class="btn btn-sm btn-outline-primary">Сформировать акт</a>
+        {% endif %}
+    </div>
+    <div class="card-body">
+        {% if last_reconciliation %}
+        <dl class="row mb-0">
+            <dt class="col-4">Период</dt><dd class="col-8">{{ last_reconciliation.period_start|date:"d.m.Y" }} — {{ last_reconciliation.period_end|date:"d.m.Y" }}</dd>
+            <dt class="col-4">Наше сальдо</dt><dd class="col-8">{{ last_reconciliation.our_balance|floatformat:2|intcomma }} ₽</dd>
+            <dt class="col-4">Их сальдо</dt><dd class="col-8">{{ last_reconciliation.their_balance|floatformat:2|intcomma|default:"Не указано" }}</dd>
+            <dt class="col-4">Совпало</dt><dd class="col-8">
+                {% if last_reconciliation.their_balance is None %}<span class="badge bg-secondary">Ожидает сверки</span>
+                {% elif last_reconciliation.is_matched %}<span class="badge bg-success">Да</span>
+                {% else %}<span class="badge bg-danger">Нет — расхождение!</span>{% endif %}
+            </dd>
+        </dl>
+        {% if open_discrepancies %}
+        <div class="alert alert-warning mt-3 mb-0">
+            <strong>⚠ Непогашенные расхождения: {{ open_discrepancies|length }}</strong>
+            <ul class="mb-0 mt-1">
+            {% for d in open_discrepancies %}
+                <li>{{ d.document_ref }} — {{ d.discrepancy_amount|floatformat:0|intcomma }} ₽ ({{ d.get_reason_display }})</li>
+            {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+        {% else %}
+        <p class="text-muted mb-0">Сверок с данным контрагентом не проводилось.</p>
+        {% endif %}
+    </div>
+</div>
+
+{% if counterparty.notes %}
+<div class="card mb-3"><div class="card-header"><strong>Примечания</strong></div><div class="card-body">{{ counterparty.notes }}</div></div>
+{% endif %}
+{% endblock %}

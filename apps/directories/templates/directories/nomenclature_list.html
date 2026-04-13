@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Номенклатура{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Номенклатура</h2>
+    {% if user.is_admin or user.is_accountant %}<a href="{% url 'directories:nomenclature_create' %}" class="btn btn-primary">+ Создать</a>{% endif %}
+</div>
+<table class="table table-hover table-sm">
+<thead><tr><th>Код</th><th>Наименование</th><th>Вид</th><th>Ед. изм.</th><th></th></tr></thead>
+<tbody>
+{% for n in nomenclature %}
+<tr><td>{{ n.code }}</td><td>{{ n.name }}</td><td>{{ n.get_kind_display }}</td><td>{{ n.unit }}</td>
+<td>{% if user.is_admin or user.is_accountant %}<a href="{% url 'directories:nomenclature_edit' n.pk %}" class="btn btn-sm btn-outline-primary">Ред.</a>{% endif %}</td></tr>
+{% endfor %}
+</tbody></table>
+{% endblock %}

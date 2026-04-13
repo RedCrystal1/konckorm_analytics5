@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}Акт сверки{% endblock %}
+{% block content %}
+<div class="mb-4">
+    <a href="{% url 'reconciliation:discrepancy_list' %}" class="text-decoration-none text-muted">
+        <i class="bi bi-arrow-left me-1"></i>Сверки
+    </a>
+</div>
+
+<h2>Акт сверки с {{ act.counterparty.name }}</h2>
+
+<div class="row g-4 mt-2">
+    <!-- Основная информация -->
+    <div class="col-lg-7">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-file-earmark-check me-2"></i><strong>Данные акта</strong></div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-4">Контрагент</dt>
+                    <dd class="col-8"><a href="{% url 'counterparties:detail' act.counterparty.pk %}">{{ act.counterparty.name }}</a></dd>
+                    <dt class="col-4">ИНН</dt>
+                    <dd class="col-8"><code>{{ act.counterparty.inn }}</code></dd>
+                    <dt class="col-4">Период</dt>
+                    <dd class="col-8">{{ act.period_start|date:"d.m.Y" }} — {{ act.period_end|date:"d.m.Y" }}</dd>
+                    <dt class="col-4">Наше сальдо</dt>
+                    <dd class="col-8 fw-bold fs-5">{{ act.our_balance|floatformat:2|intcomma }} ₽</dd>
+                    <dt class="col-4">Сальдо контрагента</dt>
+                    <dd class="col-8 fs-5">
+                        {% if act.their_balance is not None %}
+                            <span class="fw-bold">{{ act.their_balance|floatformat:2|intcomma }} ₽</span>
+                        {% else %}
+                            <span class="text-muted">Не указано</span>
+                        {% endif %}
+                    </dd>
+                    <dt class="col-4">Результат</dt>
+                    <dd class="col-8">
+                        {% if act.their_balance is None %}<span class="badge bg-secondary fs-6">Ожидает данных контрагента</span>
+                        {% elif act.is_matched %}<span class="badge bg-success fs-6"><i class="bi bi-check-circle me-1"></i>Совпало</span>
+                        {% else %}<span class="badge bg-danger fs-6"><i class="bi bi-x-circle me-1"></i>Расхождение</span>{% endif %}
+                    </dd>
+                    <dt class="col-4">Создал</dt>
+                    <dd class="col-8">{{ act.created_by|default:"—" }}</dd>
+                    <dt class="col-4">Дата</dt>
+                    <dd class="col-8">{{ act.created_at|date:"d.m.Y H:i" }}</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ввод сальдо контрагента -->
+    <div class="col-lg-5">
+        <div class="card border-primary">
+            <div class="card-header bg-primary text-white"><i class="bi bi-pencil-square me-2"></i><strong>Ввод данных контрагента</strong></div>
+            <div class="card-body">
+                <p class="text-muted small">Введите сальдо из акта сверки, полученного от контрагента. Система автоматически сравнит и создаст расхождение при несовпадении.</p>
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Сальдо контрагента (руб.)</label>
+                        <input type="text" name="their_balance" class="form-control form-control-lg"
+                               placeholder="Например: 125000.50"
+                               value="{% if act.their_balance is not None %}{{ act.their_balance }}{% endif %}">
+                        <small class="text-muted">Положительное = контрагент считает что мы должны ему</small>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-check-lg me-1"></i>Сверить данные
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        {% if act.their_balance is not None and not act.is_matched %}
+        <div class="card mt-3 border-danger">
+            <div class="card-body text-center">
+                <i class="bi bi-exclamation-triangle text-danger fs-2"></i>
+                <h5 class="mt-2">Расхождение</h5>
+                <p class="fs-4 fw-bold text-danger mb-1">
+                    {{ act.our_balance|floatformat:2|intcomma }} ≠ {{ act.their_balance|floatformat:2|intcomma }}
+                </p>
+                <p class="text-muted">Разница: <strong>{{ act.our_balance|add:act.their_balance|floatformat:2|intcomma }}</strong> руб.</p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Расхождения -->
+{% if discrepancies %}
+<div class="card mt-4">
+    <div class="card-header d-flex justify-content-between">
+        <span><i class="bi bi-exclamation-circle me-2 text-danger"></i><strong>Расхождения ({{ discrepancies|length }})</strong></span>
+    </div>
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Документ</th>
+                    <th class="text-end">Наша сумма</th>
+                    <th class="text-end">Их сумма</th>
+                    <th class="text-end">Расхождение</th>
+                    <th>Причина</th>
+                    <th>Статус</th>
+                    <th>Ответственный</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for d in discrepancies %}
+            <tr class="{% if d.status == 'open' %}table-danger{% elif d.status == 'in_progress' %}table-warning{% endif %}">
+                <td>{{ d.document_ref }}</td>
+                <td class="text-end">{{ d.our_amount|floatformat:2|intcomma }}</td>
+                <td class="text-end">{{ d.their_amount|floatformat:2|intcomma|default:"—" }}</td>
+                <td class="text-end fw-bold text-danger">{{ d.discrepancy_amount|floatformat:2|intcomma }}</td>
+                <td>{{ d.get_reason_display }}</td>
+                <td>
+                    {% if d.status == 'open' %}<span class="badge bg-danger">Открыто</span>
+                    {% elif d.status == 'in_progress' %}<span class="badge bg-warning text-dark">В работе</span>
+                    {% elif d.status == 'resolved' %}<span class="badge bg-success">Закрыто</span>{% endif %}
+                </td>
+                <td><small>{{ d.responsible|default:"—" }}</small></td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

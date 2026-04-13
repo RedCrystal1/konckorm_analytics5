@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Пользователи{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-0">Пользователи</h2>
+        <small class="text-muted">Управление учётными записями</small>
+    </div>
+    <a href="{% url 'accounts:user_create' %}" class="btn btn-primary btn-sm">
+        <i class="bi bi-person-plus me-1"></i>Новый пользователь
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Пользователь</th>
+                    <th>Роль</th>
+                    <th>Подразделение</th>
+                    <th>Email</th>
+                    <th>Последний вход</th>
+                    <th class="text-center">Активен</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for u in users %}
+            <tr>
+                <td>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width:32px;height:32px;background:linear-gradient(135deg,#2c5aa0,#4a7fd4);color:#fff;font-size:0.75rem;font-weight:700">
+                            {{ u.first_name|first|default:"?" }}{{ u.last_name|first|default:"" }}
+                        </span>
+                        <div>
+                            <div class="fw-semibold">{{ u.get_full_name|default:u.username }}</div>
+                            <small class="text-muted">@{{ u.username }}</small>
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    {% if u.role == 'admin' %}<span class="badge bg-danger">Администратор</span>
+                    {% elif u.role == 'accountant' %}<span class="badge bg-primary">Бухгалтер</span>
+                    {% elif u.role == 'manager' %}<span class="badge bg-info text-dark">Руководитель</span>
+                    {% elif u.role == 'procurement' %}<span class="badge bg-warning text-dark">Закупки</span>
+                    {% endif %}
+                </td>
+                <td><small>{{ u.department|default:"—" }}</small></td>
+                <td><small>{{ u.email|default:"—" }}</small></td>
+                <td><small class="text-muted">{{ u.last_login|date:"d.m.Y H:i"|default:"Не входил" }}</small></td>
+                <td class="text-center">
+                    {% if u.is_active %}<i class="bi bi-check-circle-fill text-success"></i>
+                    {% else %}<i class="bi bi-x-circle text-muted"></i>{% endif %}
+                </td>
+                <td>
+                    <a href="{% url 'accounts:user_edit' u.pk %}" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-pencil"></i>
+                    </a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="7" class="text-center py-4 text-muted">Нет пользователей</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

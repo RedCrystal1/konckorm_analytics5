@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Договоры{% endblock %}
+{% block content %}
+<h2>Договоры</h2>
+<table class="table table-hover table-sm mt-3">
+<thead><tr><th>Номер</th><th>Контрагент</th><th>Дата</th><th>Вид</th><th>Условия</th><th>Срок</th></tr></thead>
+<tbody>
+{% for c in contracts %}
+<tr><td><a href="{% url 'counterparties:contract_detail' c.pk %}">{{ c.number }}</a></td>
+<td>{{ c.counterparty.name|truncatechars:30 }}</td><td>{{ c.date|date:"d.m.Y" }}</td>
+<td>{{ c.get_kind_display }}</td><td>{{ c.get_payment_term_type_display }}</td><td>{{ c.payment_days }} дн.</td></tr>
+{% endfor %}
+</tbody></table>
+{% include "partials/_pagination.html" %}
+{% endblock %}

@@ -1,0 +1,7 @@
+-r base.txt
+
+# Production WSGI
+gunicorn>=22.0
+
+# Sentry for error tracking
+sentry-sdk[django]>=2.0

@@ -1,0 +1,12 @@
+{% for n in notifications_list %}
+<a class="dropdown-item py-2 {% if not n.is_read %}fw-bold{% endif %}" href="{% url 'notifications:mark_read' n.pk %}">
+    <div class="small">{% if n.severity == 'critical' %}🔴{% elif n.severity == 'warning' %}🟡{% else %}🔵{% endif %} {{ n.title|truncatechars:40 }}</div>
+    <div class="text-muted" style="font-size:.75rem">{{ n.created_at|timesince }} назад</div>
+</a>
+{% empty %}
+<div class="dropdown-item text-muted py-3 text-center">Нет уведомлений</div>
+{% endfor %}
+{% if notifications_list %}
+<div class="dropdown-divider"></div>
+<a class="dropdown-item text-center small" href="{% url 'notifications:list' %}">Все уведомления</a>
+{% endif %}

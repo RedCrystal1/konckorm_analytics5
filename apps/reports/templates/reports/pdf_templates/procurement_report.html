@@ -1,0 +1,11 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><style>
+body{font-family:sans-serif;font-size:12px;}table{width:100%;border-collapse:collapse;margin-top:10px;}
+th,td{border:1px solid #999;padding:4px 6px;}th{background:#4472C4;color:#fff;}h1{font-size:16px;}
+</style></head><body>
+<h1>Структура закупок по поставщикам</h1>
+<table><thead><tr><th>Поставщик</th><th>Период</th><th>Объём</th><th>Доля %</th></tr></thead>
+<tbody>{% for v in volumes %}
+<tr><td>{{ v.counterparty.name }}</td><td>{{ v.period_start|date:"d.m.Y" }}—{{ v.period_end|date:"d.m.Y" }}</td>
+<td>{{ v.volume_rub }}</td><td>{{ v.share_percent }}%</td></tr>
+{% endfor %}</tbody></table></body></html>

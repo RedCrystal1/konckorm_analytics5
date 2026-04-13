@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Ревью дублей{% endblock %}
+{% block content %}
+<h2>Ревью дублей (Импорт #{{ session.pk }})</h2>
+{% for dup in duplicates %}
+<div class="card mt-3"><div class="card-body">
+    <h6>Существующий: <strong>{{ dup.existing_counterparty.name }}</strong> (ИНН: {{ dup.existing_counterparty.inn }})</h6>
+    <p class="text-muted mb-2">Совпадение по: {{ dup.match_field }} ({{ dup.match_confidence|floatformat:0 }}%)</p>
+    <form method="post" class="d-inline">{% csrf_token %}
+        <input type="hidden" name="duplicate_id" value="{{ dup.pk }}">
+        <button name="resolution" value="merge" class="btn btn-sm btn-warning">Объединить</button>
+        <button name="resolution" value="keep_both" class="btn btn-sm btn-outline-primary">Оставить оба</button>
+        <button name="resolution" value="ignore" class="btn btn-sm btn-outline-secondary">Игнорировать</button>
+    </form>
+</div></div>
+{% empty %}<div class="alert alert-success mt-3">Все дубли обработаны.</div>
+{% endfor %}
+{% endblock %}

@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}История импортов{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-0">История импортов</h2>
+        <small class="text-muted">Все сессии загрузки данных</small>
+    </div>
+    <a href="{% url 'data_import:upload' %}" class="btn btn-primary btn-sm">
+        <i class="bi bi-cloud-upload me-1"></i>Новый импорт
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Дата</th>
+                    <th>Режим</th>
+                    <th>Формат</th>
+                    <th>Статус</th>
+                    <th class="text-center">Создано</th>
+                    <th class="text-center">Обновлено</th>
+                    <th class="text-center">Ошибок</th>
+                    <th class="text-center">Дублей</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for s in sessions %}
+            <tr>
+                <td><code>{{ s.pk }}</code></td>
+                <td>
+                    <small>{{ s.created_at|date:"d.m.Y H:i" }}</small>
+                </td>
+                <td>{{ s.get_mode_display }}</td>
+                <td>
+                    {% if s.file_format == 'excel' %}<i class="bi bi-file-earmark-excel text-success me-1"></i>
+                    {% elif s.file_format == 'xml' %}<i class="bi bi-filetype-xml text-warning me-1"></i>
+                    {% endif %}{{ s.get_file_format_display }}
+                </td>
+                <td>
+                    {% if s.status == 'completed' %}<span class="badge bg-success">Завершён</span>
+                    {% elif s.status == 'processing' %}<span class="badge bg-primary">В процессе</span>
+                    {% elif s.status == 'failed' %}<span class="badge bg-danger">Ошибка</span>
+                    {% else %}<span class="badge bg-secondary">{{ s.get_status_display }}</span>{% endif %}
+                </td>
+                <td class="text-center"><span class="text-success fw-bold">{{ s.created_records }}</span></td>
+                <td class="text-center">{{ s.updated_records }}</td>
+                <td class="text-center">{% if s.error_records > 0 %}<span class="text-danger fw-bold">{{ s.error_records }}</span>{% else %}0{% endif %}</td>
+                <td class="text-center">{% if s.duplicates_found > 0 %}<span class="text-warning fw-bold">{{ s.duplicates_found }}</span>{% else %}0{% endif %}</td>
+                <td>
+                    <a href="{% url 'data_import:results' s.pk %}" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-eye"></i>
+                    </a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="10" class="text-center py-4">
+                    <i class="bi bi-cloud-upload text-muted fs-3 d-block mb-2"></i>
+                    <span class="text-muted">Импортов ещё не было</span>
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

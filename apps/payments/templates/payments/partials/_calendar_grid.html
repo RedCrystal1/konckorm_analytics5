@@ -1,0 +1,15 @@
+{% load humanize %}
+<div class="text-center mb-3">
+    <strong>{{ month }}/{{ year }}</strong>
+</div>
+<table class="table table-bordered table-sm">
+<thead><tr><th>Пн</th><th>Вт</th><th>Ср</th><th>Чт</th><th>Пт</th><th>Сб</th><th>Вс</th></tr></thead>
+<tbody><tr>
+{% for day in calendar_data %}
+    <td class="{% if not day.in_month %}text-muted bg-light{% endif %} {% if day.is_cash_gap %}bg-danger bg-opacity-10{% endif %}" style="min-width:80px;min-height:60px;vertical-align:top;">
+        <small>{{ day.date.day }}</small>
+        {% for p in day.payments %}<div class="small text-truncate">{{ p.counterparty.name|truncatechars:12 }}: {{ p.amount|floatformat:0 }}</div>{% endfor %}
+    </td>
+    {% if forloop.counter|divisibleby:7 %}</tr><tr>{% endif %}
+{% endfor %}
+</tr></tbody></table>

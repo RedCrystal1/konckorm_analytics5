@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Корректировка импорта #{{ session.pk }}{% endblock %}
+{% block content %}
+<h2>Ручная корректировка данных (Импорт #{{ session.pk }})</h2>
+<p class="text-muted">Все изменения автоматически логируются с указанием даты, времени и ответственного.</p>
+
+{% if edit_form %}
+<!-- Форма редактирования -->
+<div class="card mb-3 border-primary">
+    <div class="card-header bg-primary text-white">
+        <strong>Редактирование: {{ edit_cp.name }}</strong>
+    </div>
+    <div class="card-body">
+        <form method="post">{% csrf_token %}
+            <div class="row">
+            {% for field in edit_form %}
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.errors %}<div class="text-danger small">{{ field.errors.0 }}</div>{% endif %}
+                </div>
+            {% endfor %}
+            </div>
+            <button type="submit" class="btn btn-primary">Сохранить изменения</button>
+            <a href="{% url 'data_import:corrections' session.pk %}" class="btn btn-outline-secondary">Отмена</a>
+            <span class="text-muted small ms-3">Изменения будут залогированы в журнале аудита</span>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+<!-- Список контрагентов из импорта -->
+<div class="card">
+    <div class="card-header"><strong>Контрагенты из этого импорта</strong></div>
+    <div class="card-body p-0">
+        <table class="table table-hover table-sm mb-0">
+            <thead>
+                <tr><th>Код 1С</th><th>Наименование</th><th>ИНН</th><th>Телефон</th><th>Email</th><th></th></tr>
+            </thead>
+            <tbody>
+            {% for cp in counterparties %}
+            <tr {% if edit_cp and edit_cp.pk == cp.pk %}class="table-primary"{% endif %}>
+                <td>{{ cp.code_1c }}</td>
+                <td>{{ cp.name }}</td>
+                <td>{{ cp.inn }}</td>
+                <td>{{ cp.phone|default:"—" }}</td>
+                <td>{{ cp.email|default:"—" }}</td>
+                <td>
+                    <a href="?edit={{ cp.pk }}" class="btn btn-sm btn-outline-primary">Корректировать</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6" class="text-muted text-center py-3">Нет контрагентов для корректировки</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="mt-3">
+    <a href="{% url 'data_import:results' session.pk %}" class="btn btn-outline-secondary">← Результаты импорта</a>
+    <a href="{% url 'accounts:audit_log' %}" class="btn btn-outline-info">Журнал аудита →</a>
+</div>
+{% endblock %}

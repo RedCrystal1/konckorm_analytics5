@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}Платёжный календарь{% endblock %}
+{% block content %}
+<h2>Платёжный календарь</h2>
+
+<!-- Навигация по месяцам и режим отображения -->
+<div class="d-flex justify-content-between align-items-center my-3">
+    <div class="d-flex gap-2">
+        {% if prev_month %}
+        <a href="?year={{ prev_year }}&month={{ prev_month }}&view={{ view_mode }}" class="btn btn-outline-secondary btn-sm">&larr; Пред.</a>
+        {% endif %}
+        <strong class="align-self-center">{{ month_name }} {{ year }}</strong>
+        <a href="?year={{ next_year }}&month={{ next_month }}&view={{ view_mode }}" class="btn btn-outline-secondary btn-sm">След. &rarr;</a>
+    </div>
+    <div class="btn-group btn-group-sm">
+        <a href="?year={{ year }}&month={{ month }}&view=day" class="btn btn-outline-primary {% if view_mode == 'day' %}active{% endif %}">День</a>
+        <a href="?year={{ year }}&month={{ month }}&view=week" class="btn btn-outline-primary {% if view_mode == 'week' %}active{% endif %}">Неделя</a>
+        <a href="?year={{ year }}&month={{ month }}&view=month" class="btn btn-outline-primary {% if view_mode == 'month' %}active{% endif %}">Месяц</a>
+    </div>
+</div>
+
+<!-- Легенда (кликабельная) -->
+<div class="mb-2 small">
+    <a href="{% url 'registers:debt_register' %}?status=current" class="badge bg-success text-decoration-none">Оплачен</a>
+    <a href="{% url 'registers:debt_register' %}?status=current" class="badge bg-warning text-dark text-decoration-none">Ожидается</a>
+    <a href="{% url 'registers:debt_register' %}" class="badge bg-danger text-decoration-none">Просрочен</a>
+    <a href="{% url 'payments:alerts' %}" class="badge bg-dark bg-opacity-10 text-dark border text-decoration-none">Кассовые разрывы</a>
+</div>
+
+<!-- Календарная сетка -->
+<div class="card mb-3">
+    <div class="card-body p-2">
+        <table class="table table-bordered table-sm mb-0">
+            <thead>
+                <tr>
+                    <th class="text-center">Пн</th><th class="text-center">Вт</th>
+                    <th class="text-center">Ср</th><th class="text-center">Чт</th>
+                    <th class="text-center">Пт</th>
+                    <th class="text-center text-muted">Сб</th>
+                    <th class="text-center text-muted">Вс</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                {% for day in calendar_data %}
+                    <td class="{% if not day.in_month %}text-muted bg-light{% endif %} {% if day.is_cash_gap %}bg-danger bg-opacity-10{% endif %}"
+                        style="min-width:100px; min-height:70px; vertical-align:top; font-size:0.8rem;">
+                        <div class="fw-bold mb-1 {% if day.is_today %}text-primary{% endif %}">{{ day.date.day }}</div>
+                        {% for p in day.payments %}
+                            <div class="rounded px-1 mb-1 {% if p.status == 'completed' %}bg-success bg-opacity-10{% elif p.status == 'overdue' %}bg-danger bg-opacity-10{% else %}bg-warning bg-opacity-10{% endif %}">
+                                <small class="d-block text-truncate">{{ p.counterparty.name|truncatechars:15 }}</small>
+                                <small class="fw-bold">{{ p.amount|floatformat:0|intcomma }} ₽</small>
+                                {% if p.status == 'completed' %}<small class="text-success">✓</small>
+                                {% elif p.status == 'overdue' %}<small class="text-danger">!</small>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                        {% if day.balance %}
+                            <div class="mt-1 border-top pt-1 {% if day.balance.is_cash_gap %}text-danger fw-bold{% else %}text-muted{% endif %}">
+                                <small>{{ day.balance.closing_balance|floatformat:0|intcomma }}</small>
+                            </div>
+                        {% endif %}
+                    </td>
+                    {% if forloop.counter|divisibleby:7 %}
+                </tr>
+                {% if not forloop.last %}<tr>{% endif %}
+                    {% endif %}
+                {% endfor %}
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- График прогнозного остатка -->
+<div class="card">
+    <div class="card-header"><strong>Прогноз остатка денежных средств</strong></div>
+    <div class="card-body">
+        {% if forecast_data %}
+        <canvas id="forecastChart" height="200"></canvas>
+        {% else %}
+        <p class="text-muted mb-0">Нет данных для прогноза.</p>
+        {% endif %}
+    </div>
+</div>
+
+{% if cash_gap_alerts %}
+<div class="card mt-3 border-danger">
+    <div class="card-header bg-danger text-white"><strong>⚠ Предупреждения о кассовых разрывах</strong></div>
+    <div class="card-body p-0">
+        <table class="table table-sm mb-0">
+            <thead><tr><th>Дата</th><th class="text-end">Дефицит</th></tr></thead>
+            <tbody>
+            {% for alert in cash_gap_alerts %}
+            <tr class="table-danger"><td>{{ alert.date|date:"d.m.Y" }}</td><td class="text-end fw-bold">{{ alert.deficit_amount|floatformat:0|intcomma }} ₽</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+{% if forecast_data %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    new Chart(document.getElementById('forecastChart'), {
+        type: 'bar',
+        data: {
+            labels: [{% for d in forecast_data %}"{{ d.date|date:'d.m' }}"{% if not forloop.last %},{% endif %}{% endfor %}],
+            datasets: [{
+                label: 'Остаток ДС',
+                data: [{% for d in forecast_data %}{{ d.closing_balance }}{% if not forloop.last %},{% endif %}{% endfor %}],
+                backgroundColor: [{% for d in forecast_data %}{% if d.is_cash_gap %}'rgba(220,53,69,0.6)'{% else %}'rgba(68,114,196,0.6)'{% endif %}{% if not forloop.last %},{% endif %}{% endfor %}]
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: false } }
+        }
+    });
+});
+</script>
+{% endif %}
+{% endblock %}

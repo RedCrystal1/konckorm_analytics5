@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Профиль — КонцКорма.Аналитика{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-0">Профиль</h2>
+        <small class="text-muted">Информация о вашей учётной записи</small>
+    </div>
+    <a href="{% url 'accounts:profile_edit' %}" class="btn btn-primary btn-sm">
+        <i class="bi bi-pencil me-1"></i>Редактировать
+    </a>
+</div>
+
+<div class="row g-4">
+    <!-- Карточка пользователя -->
+    <div class="col-lg-4">
+        <div class="card text-center">
+            <div class="card-body py-4">
+                <div class="d-inline-flex align-items-center justify-content-center rounded-circle mb-3" style="width:72px;height:72px;background:linear-gradient(135deg,#2c5aa0,#4a7fd4);color:#fff;font-size:1.8rem;font-weight:700">
+                    {{ user_obj.first_name|first|default:user_obj.username|first|upper }}
+                </div>
+                <h5 class="fw-bold mb-0">{{ user_obj.get_full_name }}</h5>
+                <span class="badge bg-primary mt-2">{{ user_obj.get_role_display }}</span>
+                <p class="text-muted small mt-2 mb-0">{{ user_obj.position|default:"" }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Детали -->
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-person-lines-fill me-2"></i><strong>Основная информация</strong></div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <small class="text-muted text-uppercase fw-bold" style="font-size:0.7rem">Логин</small>
+                            <div>{{ user_obj.username }}</div>
+                        </div>
+                        <div class="mb-3">
+                            <small class="text-muted text-uppercase fw-bold" style="font-size:0.7rem">Email</small>
+                            <div>{{ user_obj.email|default:"—" }}</div>
+                        </div>
+                        <div class="mb-3">
+                            <small class="text-muted text-uppercase fw-bold" style="font-size:0.7rem">Телефон</small>
+                            <div>{{ user_obj.phone|default:"—" }}</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <small class="text-muted text-uppercase fw-bold" style="font-size:0.7rem">Подразделение</small>
+                            <div>{{ user_obj.department|default:"—" }}</div>
+                        </div>
+                        <div class="mb-3">
+                            <small class="text-muted text-uppercase fw-bold" style="font-size:0.7rem">Должность</small>
+                            <div>{{ user_obj.position|default:"—" }}</div>
+                        </div>
+                        <div class="mb-3">
+                            <small class="text-muted text-uppercase fw-bold" style="font-size:0.7rem">Роль</small>
+                            <div><span class="badge bg-primary">{{ user_obj.get_role_display }}</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Настройки уведомлений -->
+        <div class="card mt-3">
+            <div class="card-header"><i class="bi bi-bell me-2"></i><strong>Уведомления</strong></div>
+            <div class="card-body">
+                <div class="d-flex gap-4">
+                    <div class="d-flex align-items-center gap-2">
+                        {% if user_obj.notify_overdue %}<i class="bi bi-check-circle-fill text-success"></i>{% else %}<i class="bi bi-x-circle text-muted"></i>{% endif %}
+                        <span>О просрочке</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        {% if user_obj.notify_cash_gap %}<i class="bi bi-check-circle-fill text-success"></i>{% else %}<i class="bi bi-x-circle text-muted"></i>{% endif %}
+                        <span>О кассовых разрывах</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        {% if user_obj.notify_import %}<i class="bi bi-check-circle-fill text-success"></i>{% else %}<i class="bi bi-x-circle text-muted"></i>{% endif %}
+                        <span>Об импорте</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,15 @@
+{% load humanize %}
+<table class="table table-hover table-sm">
+<thead class="table-light"><tr><th>Наименование</th><th>ИНН</th><th>Ключевой</th><th>Менеджер</th></tr></thead>
+<tbody>
+{% for cp in counterparties %}
+<tr style="cursor:pointer" onclick="window.location='{% url 'counterparties:detail' cp.pk %}'">
+    <td>{{ cp.name }}</td><td>{{ cp.inn }}</td>
+    <td>{% if cp.is_key_supplier %}<span class="badge bg-warning text-dark">★</span>{% endif %}</td>
+    <td>{{ cp.responsible_manager|default:"—" }}</td>
+</tr>
+{% empty %}
+<tr><td colspan="4" class="text-center text-muted py-3">Контрагенты не найдены</td></tr>
+{% endfor %}
+</tbody></table>
+{% include "partials/_pagination.html" %}

@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% block title %}{{ notification.title }}{% endblock %}
+{% block content %}
+<div class="mb-4">
+    <a href="{% url 'notifications:list' %}" class="text-decoration-none text-muted">
+        <i class="bi bi-arrow-left me-1"></i>Все уведомления
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card border-start border-4 {% if notification.severity == 'critical' %}border-danger{% elif notification.severity == 'warning' %}border-warning{% else %}border-info{% endif %}">
+            <div class="card-body">
+                <!-- Заголовок -->
+                <div class="d-flex align-items-start gap-3 mb-3">
+                    <div class="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0"
+                         style="width:48px;height:48px;{% if notification.severity == 'critical' %}background:rgba(239,68,68,0.1){% elif notification.severity == 'warning' %}background:rgba(245,158,11,0.1){% else %}background:rgba(6,182,212,0.1){% endif %}">
+                        {% if notification.type == 'overdue' %}<i class="bi bi-clock-history fs-4 {% if notification.severity == 'critical' %}text-danger{% else %}text-warning{% endif %}"></i>
+                        {% elif notification.type == 'cash_gap' %}<i class="bi bi-exclamation-triangle fs-4 text-danger"></i>
+                        {% elif notification.type == 'import_complete' %}<i class="bi bi-cloud-check fs-4 text-success"></i>
+                        {% elif notification.type == 'import_error' %}<i class="bi bi-cloud-slash fs-4 text-danger"></i>
+                        {% elif notification.type == 'discrepancy' %}<i class="bi bi-arrow-left-right fs-4 text-warning"></i>
+                        {% else %}<i class="bi bi-info-circle fs-4 text-info"></i>{% endif %}
+                    </div>
+                    <div>
+                        <h4 class="mb-1">{{ notification.title }}</h4>
+                        <div class="d-flex gap-2 flex-wrap">
+                            {% if notification.severity == 'critical' %}<span class="badge bg-danger">Критическое</span>
+                            {% elif notification.severity == 'warning' %}<span class="badge bg-warning text-dark">Предупреждение</span>
+                            {% else %}<span class="badge bg-info text-dark">Информация</span>{% endif %}
+
+                            {% if notification.type == 'overdue' %}<span class="badge bg-outline-warning border">Просрочка</span>
+                            {% elif notification.type == 'cash_gap' %}<span class="badge bg-outline-danger border">Кассовый разрыв</span>
+                            {% elif notification.type == 'import_complete' %}<span class="badge bg-outline-success border">Импорт</span>
+                            {% elif notification.type == 'discrepancy' %}<span class="badge bg-outline-info border">Расхождение</span>
+                            {% else %}<span class="badge bg-outline-secondary border">Системное</span>{% endif %}
+
+                            {% if notification.is_read %}<span class="badge bg-secondary">Прочитано</span>
+                            {% else %}<span class="badge bg-primary">Новое</span>{% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Сообщение -->
+                <div class="p-3 rounded mb-3" style="background:#f8fafc">
+                    <p class="mb-0" style="white-space:pre-line; font-size:0.95rem">{{ notification.message }}</p>
+                </div>
+
+                <!-- Действия -->
+                <div class="d-flex gap-2 flex-wrap">
+                    {% if notification.link %}
+                    <a href="{{ notification.link }}" class="btn btn-primary">
+                        <i class="bi bi-box-arrow-up-right me-1"></i>Перейти к данным
+                    </a>
+                    {% endif %}
+
+                    {% if not notification.is_read %}
+                    <a href="{% url 'notifications:mark_read' notification.pk %}" class="btn btn-outline-primary">
+                        <i class="bi bi-check2 me-1"></i>Отметить прочитанным
+                    </a>
+                    {% endif %}
+
+                    <form method="post" action="{% url 'notifications:delete' notification.pk %}" class="d-inline">
+                        {% csrf_token %}
+                        <button class="btn btn-outline-danger" onclick="return confirm('Удалить уведомление?')">
+                            <i class="bi bi-trash me-1"></i>Удалить
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Боковая информация -->
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-info-circle me-2"></i><strong>Информация</strong></div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <small class="text-muted text-uppercase fw-bold" style="font-size:0.7rem">Дата создания</small>
+                    <div>{{ notification.created_at|date:"d.m.Y H:i:s" }}</div>
+                </div>
+                {% if notification.is_read %}
+                <div class="mb-3">
+                    <small class="text-muted text-uppercase fw-bold" style="font-size:0.7rem">Прочитано</small>
+                    <div>{{ notification.read_at|date:"d.m.Y H:i:s" }}</div>
+                </div>
+                {% endif %}
+                <div class="mb-3">
+                    <small class="text-muted text-uppercase fw-bold" style="font-size:0.7rem">Тип</small>
+                    <div>{{ notification.get_type_display }}</div>
+                </div>
+                <div class="mb-3">
+                    <small class="text-muted text-uppercase fw-bold" style="font-size:0.7rem">Важность</small>
+                    <div>{{ notification.get_severity_display }}</div>
+                </div>
+                {% if notification.link %}
+                <div>
+                    <small class="text-muted text-uppercase fw-bold" style="font-size:0.7rem">Ссылка</small>
+                    <div><a href="{{ notification.link }}">{{ notification.link }}</a></div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Рекомендации по типу -->
+        <div class="card mt-3">
+            <div class="card-header"><i class="bi bi-lightbulb me-2"></i><strong>Рекомендации</strong></div>
+            <div class="card-body" style="font-size:0.85rem">
+                {% if notification.type == 'overdue' %}
+                <p class="text-muted mb-2">При просрочке платежей рекомендуется:</p>
+                <ul class="text-muted mb-0 ps-3">
+                    <li>Проверить реестр задолженности</li>
+                    <li>Связаться с контрагентом</li>
+                    <li>Проверить наличие средств на счёте</li>
+                    <li>При необходимости запросить отсрочку</li>
+                </ul>
+                {% elif notification.type == 'cash_gap' %}
+                <p class="text-muted mb-2">При кассовом разрыве рекомендуется:</p>
+                <ul class="text-muted mb-0 ps-3">
+                    <li>Проверить платёжный календарь</li>
+                    <li>Перенести менее приоритетные платежи</li>
+                    <li>Ускорить получение дебиторской задолженности</li>
+                    <li>Рассмотреть кредитную линию</li>
+                </ul>
+                {% elif notification.type == 'discrepancy' %}
+                <p class="text-muted mb-2">При обнаружении расхождения:</p>
+                <ul class="text-muted mb-0 ps-3">
+                    <li>Открыть акт сверки с контрагентом</li>
+                    <li>Сравнить документы обеих сторон</li>
+                    <li>Установить причину расхождения</li>
+                    <li>Назначить ответственного за урегулирование</li>
+                </ul>
+                {% else %}
+                <p class="text-muted mb-0">Информационное уведомление. Действий не требуется.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

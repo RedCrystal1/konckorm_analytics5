@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}Реестр задолженности{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Реестр задолженности по срокам</h2>
+    <div class="d-flex gap-2">
+        <a href="{% url 'reports:generator' %}" class="btn btn-outline-primary btn-sm">Экспорт →</a>
+    </div>
+</div>
+
+<!-- Сводка -->
+{% if summary.total_debt %}
+<div class="row g-3 mb-3">
+    <div class="col-sm-6 col-xl-3"><div class="card"><div class="card-body text-center py-2">
+        <div class="text-muted small">Общая задолженность</div>
+        <h5 class="mb-0">{{ summary.total_debt|floatformat:0|intcomma }} ₽</h5>
+    </div></div></div>
+    <div class="col-sm-6 col-xl-3"><div class="card border-danger"><div class="card-body text-center py-2">
+        <div class="text-muted small">Просроченная</div>
+        <h5 class="mb-0 text-danger">{{ summary.total_overdue|floatformat:0|intcomma }} ₽</h5>
+    </div></div></div>
+    <div class="col-sm-6 col-xl-3"><div class="card"><div class="card-body text-center py-2">
+        <div class="text-muted small">Текущая</div>
+        <h5 class="mb-0 text-success">{{ summary.total_current|floatformat:0|intcomma }} ₽</h5>
+    </div></div></div>
+    <div class="col-sm-6 col-xl-3"><div class="card"><div class="card-body text-center py-2">
+        <div class="text-muted small">Записей</div>
+        <h5 class="mb-0">{{ summary.record_count }}</h5>
+    </div></div></div>
+</div>
+{% endif %}
+
+<!-- Фильтры и группировка -->
+<div class="card mb-3">
+    <div class="card-body py-2">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label small">Поиск</label>
+                <input type="text" name="search" value="{{ request.GET.search }}" class="form-control form-control-sm" placeholder="Контрагент или документ...">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small">Статус</label>
+                <select name="status" class="form-select form-select-sm">
+                    <option value="">Все</option>
+                    <option value="current" {% if request.GET.status == 'current' %}selected{% endif %}>Текущая</option>
+                    <option value="overdue_30" {% if request.GET.status == 'overdue_30' %}selected{% endif %}>Просрочка до 30 дн.</option>
+                    <option value="overdue_60" {% if request.GET.status == 'overdue_60' %}selected{% endif %}>30–60 дней</option>
+                    <option value="overdue_90" {% if request.GET.status == 'overdue_90' %}selected{% endif %}>60–90 дней</option>
+                    <option value="overdue_90_plus" {% if request.GET.status == 'overdue_90_plus' %}selected{% endif %}>Свыше 90 дн.</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small">Группировка</label>
+                <select name="group_by" class="form-select form-select-sm">
+                    <option value="">Без группировки</option>
+                    <option value="manager" {% if request.GET.group_by == 'manager' %}selected{% endif %}>По менеджерам</option>
+                    <option value="interval" {% if request.GET.group_by == 'interval' %}selected{% endif %}>По интервалам просрочки</option>
+                    <option value="key_supplier" {% if request.GET.group_by == 'key_supplier' %}selected{% endif %}>Ключевые поставщики</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small">Только ключевые</label>
+                <select name="key_only" class="form-select form-select-sm">
+                    <option value="">Все</option>
+                    <option value="1" {% if request.GET.key_only == '1' %}selected{% endif %}>Только ключевые</option>
+                </select>
+            </div>
+            <div class="col-md-1">
+                <button type="submit" class="btn btn-primary btn-sm w-100">🔍</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Легенда цветов -->
+<div class="mb-2 small">
+    <span class="badge bg-success">Оплачен</span>
+    <span class="badge bg-info text-dark">Текущая</span>
+    <span class="badge" style="background:#fff3cd;color:#664d03;border:1px solid #ffc107">Скоро срок (≤3 дн.)</span>
+    <span class="badge bg-warning text-dark">Просрочка ≤60 дн.</span>
+    <span class="badge bg-danger">Просрочка &gt;60 дн.</span>
+</div>
+
+<!-- Таблица с группировкой -->
+{% if grouped_data %}
+    {% for group_name, group_records, group_total in grouped_data %}
+    <div class="card mb-3">
+        <div class="card-header d-flex justify-content-between">
+            <strong>{{ group_name }}</strong>
+            <span>{{ group_total|floatformat:0|intcomma }} ₽ ({{ group_records|length }} зап.)</span>
+        </div>
+        <div class="card-body p-0">
+            {% with records=group_records %}
+            {% include "registers/partials/_debt_table_rows.html" %}
+            {% endwith %}
+        </div>
+    </div>
+    {% endfor %}
+{% else %}
+    <div id="table-body">{% include "registers/partials/_debt_table.html" %}</div>
+{% endif %}
+{% endblock %}

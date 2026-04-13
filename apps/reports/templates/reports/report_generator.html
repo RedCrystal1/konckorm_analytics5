@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Генератор отчётов{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-0">Генератор отчётов</h2>
+        <small class="text-muted">Формирование и экспорт отчётов</small>
+    </div>
+    <a href="{% url 'reports:history' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-clock-history me-1"></i>История
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            <div class="row g-3">
+                {% for field in form %}
+                <div class="col-md-6">
+                    <label class="form-label">{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.errors %}<div class="text-danger small mt-1">{{ field.errors.0 }}</div>{% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% if form.non_field_errors %}
+            <div class="alert alert-danger mt-3">{{ form.non_field_errors.0 }}</div>
+            {% endif %}
+            <div class="mt-4">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-download me-1"></i>Сформировать и скачать
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function updateDateTo() {
+    var dateFrom = document.getElementById('id_date_from');
+    var dateTo = document.getElementById('id_date_to');
+    if (dateFrom && dateTo && dateFrom.value) {
+        dateTo.min = dateFrom.value;
+        if (dateTo.value && dateTo.value < dateFrom.value) {
+            dateTo.value = dateFrom.value;
+        }
+    }
+}
+document.addEventListener('DOMContentLoaded', updateDateTo);
+</script>
+{% endblock %}

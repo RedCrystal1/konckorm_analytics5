@@ -1,0 +1,7 @@
+{% load humanize %}
+<h5>{{ day|date:"d.m.Y" }}</h5>
+{% if balance %}<p>Остаток: <strong class="{% if balance.is_cash_gap %}text-danger{% endif %}">{{ balance.closing_balance|floatformat:0|intcomma }} ₽</strong></p>{% endif %}
+<table class="table table-sm"><thead><tr><th>Контрагент</th><th>Сумма</th><th>Статус</th></tr></thead>
+<tbody>{% for p in payments %}
+<tr><td>{{ p.counterparty.name }}</td><td>{{ p.amount|floatformat:0|intcomma }}</td><td>{{ p.get_status_display }}</td></tr>
+{% empty %}<tr><td colspan="3" class="text-muted">Нет платежей</td></tr>{% endfor %}</tbody></table>

@@ -1,0 +1,22 @@
+[
+  {
+    "model": "auth.group",
+    "pk": 1,
+    "fields": {"name": "Администраторы"}
+  },
+  {
+    "model": "auth.group",
+    "pk": 2,
+    "fields": {"name": "Бухгалтеры"}
+  },
+  {
+    "model": "auth.group",
+    "pk": 3,
+    "fields": {"name": "Руководители"}
+  },
+  {
+    "model": "auth.group",
+    "pk": 4,
+    "fields": {"name": "Менеджеры по закупкам"}
+  }
+]

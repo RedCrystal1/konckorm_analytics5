@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}Структура закупок{% endblock %}
+{% block content %}
+<h2>Структура закупок по поставщикам</h2>
+
+<!-- Фильтр по виду -->
+<div class="d-flex gap-2 my-3">
+    <a href="{% url 'analytics:procurement' %}" class="btn btn-sm {% if not kind_filter %}btn-primary{% else %}btn-outline-primary{% endif %}">Все</a>
+    <a href="?kind=raw" class="btn btn-sm {% if kind_filter == 'raw' %}btn-primary{% else %}btn-outline-primary{% endif %}">Сырьё</a>
+    <a href="?kind=material" class="btn btn-sm {% if kind_filter == 'material' %}btn-primary{% else %}btn-outline-primary{% endif %}">Материалы</a>
+    <a href="?kind=service" class="btn btn-sm {% if kind_filter == 'service' %}btn-primary{% else %}btn-outline-primary{% endif %}">Услуги</a>
+</div>
+
+<div class="row">
+    <!-- Диаграмма по видам -->
+    <div class="col-lg-5">
+        <div class="card mb-3">
+            <div class="card-header"><strong>Структура по видам закупок</strong></div>
+            <div class="card-body">
+                {% if kind_chart %}
+                <canvas id="kindPieChart" height="250"></canvas>
+                {% else %}
+                <p class="text-muted">Нет данных</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Диаграмма топ поставщиков -->
+    <div class="col-lg-7">
+        <div class="card mb-3">
+            <div class="card-header"><strong>Топ поставщиков по объёму</strong></div>
+            <div class="card-body">
+                {% if volumes %}
+                <canvas id="supplierBarChart" height="250"></canvas>
+                {% else %}
+                <p class="text-muted">Нет данных</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Таблица -->
+<div class="card">
+    <div class="card-header"><strong>Детализация</strong></div>
+    <div class="card-body p-0">
+        <table class="table table-hover table-sm mb-0">
+            <thead>
+                <tr>
+                    <th>Поставщик</th>
+                    <th>Период</th>
+                    <th>Вид закупок</th>
+                    <th class="text-end">Объём (руб.)</th>
+                    <th class="text-end">Доля (%)</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for v in volumes %}
+            <tr>
+                <td>
+                    <a href="{% url 'counterparties:detail' v.counterparty.pk %}">{{ v.counterparty.name }}</a>
+                    {% if v.counterparty.is_key_supplier %}<span class="badge bg-warning text-dark">★</span>{% endif %}
+                </td>
+                <td>{{ v.period_start|date:"d.m.Y" }} — {{ v.period_end|date:"d.m.Y" }}</td>
+                <td>
+                    {% if v.procurement_kind == 'raw' %}<span class="badge bg-success">Сырьё</span>
+                    {% elif v.procurement_kind == 'material' %}<span class="badge bg-info text-dark">Материалы</span>
+                    {% elif v.procurement_kind == 'service' %}<span class="badge bg-secondary">Услуги</span>
+                    {% else %}{{ v.procurement_kind }}{% endif %}
+                </td>
+                <td class="text-end fw-bold">{{ v.volume_rub|floatformat:0|intcomma }}</td>
+                <td class="text-end">{{ v.share_percent|floatformat:1 }}%</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" class="text-muted text-center py-3">Нет данных</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if kind_chart %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Круговая диаграмма по видам
+    var kindData = {{ kind_chart|safe }};
+    new Chart(document.getElementById('kindPieChart'), {
+        type: 'doughnut',
+        data: {
+            labels: kindData.map(d => d.kind),
+            datasets: [{
+                data: kindData.map(d => d.total),
+                backgroundColor: ['#2C5AA0', '#E8A838', '#6C757D', '#28A745']
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'bottom' },
+                tooltip: { callbacks: { label: function(ctx) {
+                    var total = ctx.dataset.data.reduce((a,b) => a+b, 0);
+                    var pct = (ctx.raw / total * 100).toFixed(1);
+                    return ctx.label + ': ' + new Intl.NumberFormat('ru-RU').format(ctx.raw) + ' ₽ (' + pct + '%)';
+                }}}
+            }
+        }
+    });
+});
+</script>
+{% endif %}
+{% if volumes %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Горизонтальная диаграмма топ поставщиков
+    var labels = [{% for v in volumes %}"{{ v.counterparty.name|truncatechars:20 }}"{% if not forloop.last %},{% endif %}{% endfor %}];
+    var values = [{% for v in volumes %}{{ v.volume_rub }}{% if not forloop.last %},{% endif %}{% endfor %}];
+    new Chart(document.getElementById('supplierBarChart'), {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Объём закупок (руб.)',
+                data: values,
+                backgroundColor: '#2C5AA0'
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: { x: { ticks: { callback: v => (v/1000).toFixed(0) + ' тыс.' } } }
+        }
+    });
+});
+</script>
+{% endif %}
+{% endblock %}

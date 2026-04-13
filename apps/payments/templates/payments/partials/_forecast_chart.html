@@ -1,0 +1,8 @@
+<canvas id="forecastChart" height="200"></canvas>
+<script>
+new Chart(document.getElementById('forecastChart'),{type:'bar',data:{
+    labels:[{% for b in balances %}"{{ b.date|date:'d.m' }}"{% if not forloop.last %},{% endif %}{% endfor %}],
+    datasets:[{label:'Остаток',data:[{% for b in balances %}{{ b.closing_balance }}{% if not forloop.last %},{% endif %}{% endfor %}],
+    backgroundColor:[{% for b in balances %}{% if b.is_cash_gap %}'rgba(220,53,69,0.6)'{% else %}'rgba(68,114,196,0.6)'{% endif %}{% if not forloop.last %},{% endif %}{% endfor %}]}]
+},options:{responsive:true,scales:{y:{beginAtZero:true}}}});
+</script>

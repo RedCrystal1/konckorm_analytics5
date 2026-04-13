@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Обновление статуса расхождения</h2>
+<div class="card mt-3"><div class="card-body">
+<form method="post">{% csrf_token %}
+{% for field in form %}<div class="mb-3"><label class="form-label">{{ field.label }}</label>{{ field }}</div>{% endfor %}
+<button type="submit" class="btn btn-primary">Сохранить</button>
+<a href="{% url 'reconciliation:discrepancy_detail' discrepancy.pk %}" class="btn btn-outline-secondary">Отмена</a>
+</form></div></div>
+{% endblock %}

@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<h2>{{ title }}</h2>
+<table class="table table-sm mt-3">
+<thead><tr><th>Счёт</th><th>Контрагент</th><th>Дата</th><th class="text-end">Дебет</th><th class="text-end">Кредит</th><th class="text-end">Сальдо</th></tr></thead>
+<tbody>
+{% for b in balances %}
+<tr><td>{{ b.get_account_display }}</td><td>{{ b.counterparty.name|truncatechars:25 }}</td><td>{{ b.balance_date|date:"d.m.Y" }}</td>
+<td class="text-end">{{ b.debit|floatformat:2|intcomma }}</td><td class="text-end">{{ b.credit|floatformat:2|intcomma }}</td>
+<td class="text-end fw-bold">{{ b.balance|floatformat:2|intcomma }}</td></tr>
+{% endfor %}
+</tbody></table>
+{% include "partials/_pagination.html" %}
+{% endblock %}

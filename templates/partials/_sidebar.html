@@ -1,0 +1,126 @@
+{% if user.is_authenticated %}
+<nav class="col-md-3 col-lg-2 d-md-block sidebar collapse" id="sidebarMenu" style="min-height: calc(100vh - 56px);">
+    <div class="position-sticky pt-2">
+        <ul class="nav flex-column">
+
+            <!-- Дашборд -->
+            <li class="nav-item">
+                <a class="nav-link {% if request.resolver_match.app_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard:index' %}">
+                    <i class="bi bi-grid-1x2-fill me-2"></i>Дашборд
+                </a>
+            </li>
+
+            <!-- Данные -->
+            <li class="nav-item mt-2">
+                <small class="nav-link text-muted text-uppercase disabled">Данные</small>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if request.resolver_match.app_name == 'counterparties' %}active{% endif %}" href="{% url 'counterparties:list' %}">
+                    <i class="bi bi-building me-2"></i>Контрагенты
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if request.resolver_match.app_name == 'documents' %}active{% endif %}" href="{% url 'documents:receipt_list' %}">
+                    <i class="bi bi-file-earmark-text me-2"></i>Документы
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if request.resolver_match.url_name == 'balance_list' %}active{% endif %}" href="{% url 'documents:balance_list' %}">
+                    <i class="bi bi-bank me-2"></i>Остатки по счетам
+                </a>
+            </li>
+            {% if not user.is_procurement %}
+            <li class="nav-item">
+                <a class="nav-link {% if request.resolver_match.app_name == 'directories' %}active{% endif %}" href="{% url 'directories:nomenclature_list' %}">
+                    <i class="bi bi-book me-2"></i>Справочники
+                </a>
+            </li>
+            {% endif %}
+
+            <!-- Анализ -->
+            <li class="nav-item mt-2">
+                <small class="nav-link text-muted text-uppercase disabled">Анализ</small>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if request.resolver_match.app_name == 'registers' %}active{% endif %}" href="{% url 'registers:debt_register' %}">
+                    <i class="bi bi-clipboard-data me-2"></i>Реестр задолженности
+                </a>
+            </li>
+            {% if not user.is_procurement %}
+            <li class="nav-item">
+                <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' and request.resolver_match.app_name == 'analytics' %}active{% endif %}" href="{% url 'analytics:dashboard' %}">
+                    <i class="bi bi-graph-up me-2"></i>Аналитика
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if request.resolver_match.url_name == 'procurement' %}active{% endif %}" href="{% url 'analytics:procurement' %}">
+                    <i class="bi bi-cart3 me-2"></i>Структура закупок
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if request.resolver_match.app_name == 'payments' and request.resolver_match.url_name == 'calendar' %}active{% endif %}" href="{% url 'payments:calendar' %}">
+                    <i class="bi bi-calendar3 me-2"></i>Платёжный календарь
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if request.resolver_match.url_name == 'alerts' %}active{% endif %}" href="{% url 'payments:alerts' %}">
+                    <i class="bi bi-exclamation-triangle me-2"></i>Кассовые разрывы
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if request.resolver_match.app_name == 'reconciliation' %}active{% endif %}" href="{% url 'reconciliation:discrepancy_list' %}">
+                    <i class="bi bi-arrow-left-right me-2"></i>Сверки
+                </a>
+            </li>
+            {% endif %}
+
+            <!-- Инструменты -->
+            {% if not user.is_procurement %}
+            <li class="nav-item mt-2">
+                <small class="nav-link text-muted text-uppercase disabled">Инструменты</small>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if request.resolver_match.app_name == 'reports' %}active{% endif %}" href="{% url 'reports:generator' %}">
+                    <i class="bi bi-printer me-2"></i>Отчёты
+                </a>
+            </li>
+            {% endif %}
+            {% if user.is_admin or user.is_accountant %}
+            <li class="nav-item">
+                <a class="nav-link {% if request.resolver_match.app_name == 'data_import' %}active{% endif %}" href="{% url 'data_import:upload' %}">
+                    <i class="bi bi-cloud-upload me-2"></i>Импорт данных
+                </a>
+            </li>
+            {% endif %}
+
+            <!-- Администрирование -->
+            {% if user.is_admin %}
+            <li class="nav-item mt-2">
+                <small class="nav-link text-muted text-uppercase disabled">Администрирование</small>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'accounts:user_list' %}">
+                    <i class="bi bi-people me-2"></i>Пользователи
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'accounts:audit_log' %}">
+                    <i class="bi bi-shield-lock me-2"></i>Журнал аудита
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'admin:index' %}">
+                    <i class="bi bi-gear me-2"></i>Django Admin
+                </a>
+            </li>
+            {% endif %}
+
+        </ul>
+
+        <!-- Версия -->
+        <div class="px-3 py-3 mt-3 border-top">
+            <small class="text-muted" style="font-size:0.7rem">КонцКорма.Аналитика v1.0</small>
+        </div>
+    </div>
+</nav>
+{% endif %}

@@ -1,0 +1,80 @@
+{% load static %}
+<nav class="navbar navbar-expand-lg navbar-dark fixed-top">
+    <div class="container-fluid">
+        <!-- Мобильная кнопка sidebar -->
+        <button class="btn btn-outline-light d-md-none me-2 border-0" type="button" onclick="toggleSidebar()" aria-label="Меню">
+            <i class="bi bi-list fs-5"></i>
+        </button>
+
+        <!-- Логотип -->
+        <a class="navbar-brand d-flex align-items-center" href="{% url 'dashboard:index' %}">
+            <span class="d-flex align-items-center justify-content-center rounded me-2" style="width:32px;height:32px;background:rgba(255,255,255,0.15)">
+                <i class="bi bi-bar-chart-fill"></i>
+            </span>
+            <span>
+                <strong>КонцКорма</strong><span class="opacity-75">.Аналитика</span>
+            </span>
+        </a>
+
+        <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ms-auto align-items-center gap-1">
+                {% if user.is_authenticated %}
+
+                <!-- Уведомления -->
+                <li class="nav-item">
+                    <a class="nav-link position-relative" href="{% url 'notifications:list' %}" title="Уведомления">
+                        <i class="bi bi-bell fs-5"></i>
+                        {% if unread_count > 0 %}
+                        <span class="badge bg-danger rounded-pill position-absolute" style="top:2px;right:-2px;font-size:0.6rem;padding:0.2em 0.45em">{{ unread_count }}</span>
+                        {% endif %}
+                    </a>
+                </li>
+
+                <!-- Разделитель -->
+                <li class="nav-item d-none d-lg-block">
+                    <span class="nav-link px-0" style="opacity:0.3">|</span>
+                </li>
+
+                <!-- Пользователь -->
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle d-flex align-items-center gap-2" href="#" data-bs-toggle="dropdown">
+                        <span class="d-flex align-items-center justify-content-center rounded-circle" style="width:28px;height:28px;background:rgba(255,255,255,0.2);font-size:0.75rem;font-weight:700">
+                            {{ user.first_name|first|default:user.username|first|upper }}
+                        </span>
+                        <span class="d-none d-lg-inline">{{ user.get_full_name|default:user.username }}</span>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li class="px-3 py-2 text-muted" style="font-size:0.78rem">
+                            {{ user.get_role_display }}<br>
+                            <small>{{ user.email|default:"" }}</small>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="{% url 'accounts:profile' %}"><i class="bi bi-person me-2"></i>Профиль</a></li>
+                        {% if user.is_admin %}
+                        <li><a class="dropdown-item" href="{% url 'admin:index' %}"><i class="bi bi-gear me-2"></i>Администрирование</a></li>
+                        {% endif %}
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item text-danger" href="{% url 'accounts:logout' %}"><i class="bi bi-box-arrow-right me-2"></i>Выход</a></li>
+                    </ul>
+                </li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<!-- Отступ под фиксированный navbar -->
+<div style="height:56px"></div>
+
+<!-- Sidebar backdrop (mobile) -->
+<div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleSidebar()"></div>
+<script>
+function toggleSidebar() {
+    document.getElementById('sidebarMenu').classList.toggle('show');
+    document.getElementById('sidebarBackdrop').classList.toggle('show');
+}
+</script>

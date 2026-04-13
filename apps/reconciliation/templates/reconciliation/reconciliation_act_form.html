@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Формирование акта сверки{% endblock %}
+{% block content %}
+<div class="mb-4">
+    <h2 class="mb-0">Формирование акта сверки</h2>
+    <small class="text-muted">Выберите контрагента и период — система автоматически рассчитает сальдо</small>
+</div>
+
+<div class="row">
+    <div class="col-lg-7">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-calculator me-2"></i><strong>Параметры сверки</strong></div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    {% for field in form %}
+                    <div class="mb-3">
+                        <label class="form-label">{{ field.label }}</label>
+                        {{ field }}
+                        {% if field.errors %}<div class="text-danger small mt-1">{{ field.errors.0 }}</div>{% endif %}
+                    </div>
+                    {% endfor %}
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger">{{ form.non_field_errors.0 }}</div>
+                    {% endif %}
+                    <div class="d-flex gap-2 mt-4">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg me-1"></i>Сформировать
+                        </button>
+                        <a href="{% url 'reconciliation:discrepancy_list' %}" class="btn btn-outline-secondary">Отмена</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-info-circle me-2"></i><strong>Как это работает</strong></div>
+            <div class="card-body" style="font-size:0.85rem">
+                <div class="d-flex align-items-start gap-2 mb-3">
+                    <span class="badge bg-primary rounded-circle" style="width:24px;height:24px;line-height:24px;text-align:center">1</span>
+                    <span class="text-muted">Система подсчитает <strong>наше сальдо</strong>: поступления минус оплаты за период</span>
+                </div>
+                <div class="d-flex align-items-start gap-2 mb-3">
+                    <span class="badge bg-primary rounded-circle" style="width:24px;height:24px;line-height:24px;text-align:center">2</span>
+                    <span class="text-muted">По неоплаченным документам автоматически создадутся <strong>расхождения</strong></span>
+                </div>
+                <div class="d-flex align-items-start gap-2 mb-3">
+                    <span class="badge bg-primary rounded-circle" style="width:24px;height:24px;line-height:24px;text-align:center">3</span>
+                    <span class="text-muted">Получите акт от контрагента и введите <strong>их сальдо</strong> на странице акта</span>
+                </div>
+                <div class="d-flex align-items-start gap-2">
+                    <span class="badge bg-primary rounded-circle" style="width:24px;height:24px;line-height:24px;text-align:center">4</span>
+                    <span class="text-muted">Система сверит данные и покажет итог: <span class="text-success">совпало</span> или <span class="text-danger">расхождение</span></span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

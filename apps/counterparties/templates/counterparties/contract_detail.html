@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Договор №{{ contract.number }}{% endblock %}
+{% block content %}
+<h2>Договор №{{ contract.number }} от {{ contract.date|date:"d.m.Y" }}</h2>
+<div class="card mt-3"><div class="card-body">
+<dl class="row mb-0">
+    <dt class="col-4">Контрагент</dt><dd class="col-8"><a href="{% url 'counterparties:detail' contract.counterparty.pk %}">{{ contract.counterparty.name }}</a></dd>
+    <dt class="col-4">Вид</dt><dd class="col-8">{{ contract.get_kind_display }}</dd>
+    <dt class="col-4">Валюта</dt><dd class="col-8">{{ contract.get_currency_display }}</dd>
+    <dt class="col-4">Условия оплаты</dt><dd class="col-8">{{ contract.get_payment_term_type_display }}</dd>
+    <dt class="col-4">Срок оплаты</dt><dd class="col-8">{{ contract.payment_days }} дней</dd>
+    <dt class="col-4">Лимит кредитования</dt><dd class="col-8">{{ contract.credit_limit|default:"—" }}</dd>
+    <dt class="col-4">Действует</dt><dd class="col-8">{{ contract.valid_from|date:"d.m.Y"|default:"—" }} — {{ contract.valid_to|date:"d.m.Y"|default:"—" }}</dd>
+</dl></div></div>
+{% endblock %}

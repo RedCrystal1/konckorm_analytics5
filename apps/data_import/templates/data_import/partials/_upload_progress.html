@@ -1,0 +1,5 @@
+<div class="progress" style="height: 25px;">
+    <div class="progress-bar {% if session.status == 'failed' %}bg-danger{% elif session.status == 'completed' %}bg-success{% endif %}"
+         style="width: {{ session.progress_percent }}%">{{ session.progress_percent }}%</div>
+</div>
+<p class="text-muted small mt-1">{{ session.get_status_display }} — {{ session.processed_records }}/{{ session.total_records }}</p>

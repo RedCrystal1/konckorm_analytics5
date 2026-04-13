@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Импорт данных{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-0">Импорт данных</h2>
+        <small class="text-muted">Загрузка контрагентов и договоров из XML или Excel</small>
+    </div>
+    <a href="{% url 'data_import:history' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-clock-history me-1"></i>История импортов
+    </a>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-7">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-cloud-upload me-2 text-primary"></i><strong>Загрузка файла</strong></div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    {% for field in form %}
+                    <div class="mb-3">
+                        <label class="form-label">{{ field.label }}</label>
+                        {{ field }}
+                        {% if field.help_text %}<small class="text-muted d-block mt-1">{{ field.help_text }}</small>{% endif %}
+                        {% if field.errors %}<div class="text-danger small mt-1">{{ field.errors.0 }}</div>{% endif %}
+                    </div>
+                    {% endfor %}
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-upload me-1"></i>Загрузить и обработать
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-info-circle me-2"></i><strong>Инструкция</strong></div>
+            <div class="card-body" style="font-size:0.85rem">
+                <div class="mb-3">
+                    <div class="fw-semibold mb-1"><i class="bi bi-file-earmark-excel text-success me-1"></i>Excel (.xlsx)</div>
+                    <p class="text-muted mb-1">Файл должен содержать листы:</p>
+                    <ul class="text-muted mb-0">
+                        <li>«Контрагенты» — код 1С, наименование, ИНН, КПП, телефон, email</li>
+                        <li>«Договоры» — код 1С, код контрагента, номер, дата, вид, срок</li>
+                    </ul>
+                </div>
+                <div class="mb-3">
+                    <div class="fw-semibold mb-1"><i class="bi bi-filetype-xml text-warning me-1"></i>XML</div>
+                    <p class="text-muted mb-0">Формат выгрузки из 1С: секции «Контрагенты» и «Договоры»</p>
+                </div>
+                <div>
+                    <div class="fw-semibold mb-1"><i class="bi bi-arrow-repeat me-1"></i>Режимы</div>
+                    <ul class="text-muted mb-0">
+                        <li><strong>Первоначальная загрузка</strong> — создание новых записей</li>
+                        <li><strong>Обновление</strong> — обновление существующих + создание новых</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header"><i class="bi bi-shield-check me-2"></i><strong>Контроль качества</strong></div>
+            <div class="card-body" style="font-size:0.85rem">
+                <div class="d-flex align-items-start gap-2 mb-2">
+                    <i class="bi bi-check-circle text-success mt-1"></i>
+                    <span class="text-muted">Проверка контрольных сумм (SHA-256)</span>
+                </div>
+                <div class="d-flex align-items-start gap-2 mb-2">
+                    <i class="bi bi-check-circle text-success mt-1"></i>
+                    <span class="text-muted">Обнаружение дублей по ИНН и наименованию</span>
+                </div>
+                <div class="d-flex align-items-start gap-2 mb-2">
+                    <i class="bi bi-check-circle text-success mt-1"></i>
+                    <span class="text-muted">Валидация формата и обязательных полей</span>
+                </div>
+                <div class="d-flex align-items-start gap-2">
+                    <i class="bi bi-check-circle text-success mt-1"></i>
+                    <span class="text-muted">Ручная корректировка с логированием</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

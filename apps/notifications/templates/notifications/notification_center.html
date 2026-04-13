@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}Уведомления{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h2 class="mb-0">Уведомления</h2>
+        <small class="text-muted">{{ all_count }} всего, {{ unread_count_total }} непрочитанных</small>
+    </div>
+    <div class="d-flex gap-2">
+        <form method="post" action="{% url 'notifications:mark_all_read' %}" class="d-inline">
+            {% csrf_token %}
+            <button class="btn btn-sm btn-outline-primary" {% if unread_count_total == 0 %}disabled{% endif %}>
+                <i class="bi bi-check-all me-1"></i>Прочитать все
+            </button>
+        </form>
+        <form method="post" action="{% url 'notifications:delete_read' %}" class="d-inline">
+            {% csrf_token %}
+            <button class="btn btn-sm btn-outline-danger" onclick="return confirm('Удалить все прочитанные?')">
+                <i class="bi bi-trash me-1"></i>Очистить прочитанные
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- Вкладки: все / непрочитанные / прочитанные -->
+<ul class="nav nav-tabs mb-3">
+    <li class="nav-item">
+        <a class="nav-link {% if not status_filter %}active{% endif %}" href="{% url 'notifications:list' %}{% if type_filter %}?type={{ type_filter }}{% endif %}">
+            Все <span class="badge bg-secondary ms-1">{{ all_count }}</span>
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link {% if status_filter == 'unread' %}active{% endif %}" href="?status=unread{% if type_filter %}&type={{ type_filter }}{% endif %}">
+            Непрочитанные <span class="badge bg-danger ms-1">{{ unread_count_total }}</span>
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link {% if status_filter == 'read' %}active{% endif %}" href="?status=read{% if type_filter %}&type={{ type_filter }}{% endif %}">
+            Прочитанные
+        </a>
+    </li>
+</ul>
+
+<!-- Фильтр по типу -->
+<div class="d-flex gap-2 mb-3 flex-wrap">
+    <a href="{% url 'notifications:list' %}{% if status_filter %}?status={{ status_filter }}{% endif %}" class="btn btn-sm {% if not type_filter %}btn-primary{% else %}btn-outline-secondary{% endif %}">Все типы</a>
+    <a href="?type=overdue{% if status_filter %}&status={{ status_filter }}{% endif %}" class="btn btn-sm {% if type_filter == 'overdue' %}btn-warning{% else %}btn-outline-secondary{% endif %}">
+        <i class="bi bi-clock-history me-1"></i>Просрочка
+    </a>
+    <a href="?type=cash_gap{% if status_filter %}&status={{ status_filter }}{% endif %}" class="btn btn-sm {% if type_filter == 'cash_gap' %}btn-danger{% else %}btn-outline-secondary{% endif %}">
+        <i class="bi bi-exclamation-triangle me-1"></i>Кассовые разрывы
+    </a>
+    <a href="?type=import_complete{% if status_filter %}&status={{ status_filter }}{% endif %}" class="btn btn-sm {% if type_filter == 'import_complete' %}btn-success{% else %}btn-outline-secondary{% endif %}">
+        <i class="bi bi-cloud-check me-1"></i>Импорт
+    </a>
+    <a href="?type=discrepancy{% if status_filter %}&status={{ status_filter }}{% endif %}" class="btn btn-sm {% if type_filter == 'discrepancy' %}btn-info{% else %}btn-outline-secondary{% endif %}">
+        <i class="bi bi-arrow-left-right me-1"></i>Расхождения
+    </a>
+    <a href="?type=system{% if status_filter %}&status={{ status_filter }}{% endif %}" class="btn btn-sm {% if type_filter == 'system' %}btn-secondary{% else %}btn-outline-secondary{% endif %}">
+        <i class="bi bi-gear me-1"></i>Системные
+    </a>
+</div>
+
+<!-- Список уведомлений -->
+{% for n in notifications_list %}
+<a href="{% url 'notifications:detail' n.pk %}" class="text-decoration-none d-block mb-2">
+    <div class="card {% if not n.is_read %}border-start border-4 {% if n.severity == 'critical' %}border-danger{% elif n.severity == 'warning' %}border-warning{% else %}border-info{% endif %}{% endif %}" style="{% if n.is_read %}opacity:0.65{% endif %}; transition: all 0.2s;">
+        <div class="card-body py-2 px-3">
+            <div class="d-flex justify-content-between align-items-start">
+                <div class="d-flex gap-3">
+                    <!-- Иконка -->
+                    <div class="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0"
+                         style="width:40px;height:40px;{% if n.severity == 'critical' %}background:rgba(239,68,68,0.1){% elif n.severity == 'warning' %}background:rgba(245,158,11,0.1){% else %}background:rgba(6,182,212,0.1){% endif %}">
+                        {% if n.type == 'overdue' %}<i class="bi bi-clock-history {% if n.severity == 'critical' %}text-danger{% else %}text-warning{% endif %}"></i>
+                        {% elif n.type == 'cash_gap' %}<i class="bi bi-exclamation-triangle text-danger"></i>
+                        {% elif n.type == 'import_complete' %}<i class="bi bi-cloud-check text-success"></i>
+                        {% elif n.type == 'import_error' %}<i class="bi bi-cloud-slash text-danger"></i>
+                        {% elif n.type == 'discrepancy' %}<i class="bi bi-arrow-left-right text-warning"></i>
+                        {% else %}<i class="bi bi-info-circle text-info"></i>{% endif %}
+                    </div>
+                    <!-- Текст -->
+                    <div>
+                        <div class="{% if not n.is_read %}fw-bold text-dark{% else %}text-muted{% endif %}">
+                            {{ n.title }}
+                        </div>
+                        <div class="text-muted small mt-1">{{ n.message|truncatechars:100 }}</div>
+                        <div class="mt-1">
+                            {% if n.severity == 'critical' %}<span class="badge bg-danger">Критическое</span>
+                            {% elif n.severity == 'warning' %}<span class="badge bg-warning text-dark">Предупреждение</span>
+                            {% else %}<span class="badge bg-info text-dark">Информация</span>{% endif %}
+                            {% if not n.is_read %}<span class="badge bg-primary ms-1">Новое</span>{% endif %}
+                        </div>
+                    </div>
+                </div>
+                <!-- Время -->
+                <div class="text-end text-nowrap ms-3 flex-shrink-0">
+                    <small class="text-muted">{{ n.created_at|timesince }} назад</small>
+                    {% if n.link %}
+                    <div class="mt-1"><small class="text-primary">Подробнее →</small></div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</a>
+{% empty %}
+<div class="text-center py-5">
+    <i class="bi bi-bell-slash text-muted" style="font-size:3rem"></i>
+    <p class="text-muted mt-2">
+        {% if type_filter %}Уведомлений этого типа нет{% elif status_filter == 'unread' %}Нет непрочитанных уведомлений{% else %}Уведомлений нет{% endif %}
+    </p>
+</div>
+{% endfor %}
+
+{% include "partials/_pagination.html" %}
+{% endblock %}

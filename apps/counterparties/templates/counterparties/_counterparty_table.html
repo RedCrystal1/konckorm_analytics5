@@ -1,0 +1,42 @@
+{% load humanize %}
+<table class="table table-hover mb-0">
+    <thead>
+        <tr>
+            <th>Наименование</th>
+            <th>ИНН</th>
+            <th>Контакт</th>
+            <th>Менеджер</th>
+            <th class="text-center">Статус</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for cp in counterparties %}
+        <tr onclick="window.location='{% url 'counterparties:detail' cp.pk %}'" style="cursor:pointer">
+            <td>
+                <div class="fw-semibold">{{ cp.name }}</div>
+                {% if cp.is_key_supplier %}
+                <span class="badge bg-warning text-dark" style="font-size:0.65rem"><i class="bi bi-star-fill me-1"></i>Ключевой</span>
+                {% endif %}
+            </td>
+            <td><code>{{ cp.inn }}</code></td>
+            <td>
+                {% if cp.contact_person %}<small>{{ cp.contact_person }}</small>{% endif %}
+                {% if cp.phone %}<br><small class="text-muted">{{ cp.phone }}</small>{% endif %}
+            </td>
+            <td><small>{{ cp.responsible_manager|default:"—" }}</small></td>
+            <td class="text-center">
+                {% if cp.is_active %}<span class="badge bg-success">Активен</span>
+                {% else %}<span class="badge bg-secondary">Неактивен</span>{% endif %}
+            </td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="5" class="text-center py-4">
+                <i class="bi bi-building text-muted fs-3 d-block mb-2"></i>
+                <span class="text-muted">Контрагенты не найдены</span>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% include "partials/_pagination.html" %}
