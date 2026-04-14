@@ -1,17 +1,125 @@
 {% extends "base.html" %}
 {% load humanize %}
-{% block title %}Запись реестра{% endblock %}
+{% block title %}Запись реестра задолженности{% endblock %}
 {% block content %}
-<h2>Запись реестра задолженности</h2>
-<div class="card mt-3"><div class="card-body">
-<dl class="row">
-    <dt class="col-4">Контрагент</dt><dd class="col-8">{{ record.counterparty }}</dd>
-    <dt class="col-4">Документ</dt><dd class="col-8">{{ record.source_document }}</dd>
-    <dt class="col-4">Срок оплаты</dt><dd class="col-8">{{ record.planned_payment_date|date:"d.m.Y" }}</dd>
-    <dt class="col-4">Сумма</dt><dd class="col-8">{{ record.amount_rub|floatformat:2|intcomma }} ₽</dd>
-    <dt class="col-4">Просрочка</dt><dd class="col-8 text-danger">{{ record.overdue_amount|floatformat:2|intcomma }} ₽</dd>
-    <dt class="col-4">Дней просрочки</dt><dd class="col-8 fw-bold">{{ record.overdue_days }}</dd>
-    <dt class="col-4">Статус</dt><dd class="col-8">{{ record.get_status_display }}</dd>
-    <dt class="col-4">Менеджер</dt><dd class="col-8">{{ record.responsible_manager|default:"—" }}</dd>
-</dl></div></div>
+<div class="mb-3">
+    <a href="{% url 'registers:debt_register' %}" class="text-decoration-none text-muted">
+        <i class="bi bi-arrow-left me-1"></i>Реестр задолженности
+    </a>
+</div>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0">Запись реестра задолженности</h2>
+    {% if record.status == 'current' %}
+    <span class="badge bg-info text-dark fs-6">Текущая</span>
+    {% elif record.status == 'overdue_30' %}
+    <span class="badge bg-warning text-dark fs-6">Просрочка до 30 дн.</span>
+    {% elif record.status == 'overdue_60' %}
+    <span class="badge bg-warning text-dark fs-6">30–60 дней</span>
+    {% elif record.status == 'overdue_90' %}
+    <span class="badge bg-danger fs-6">60–90 дней</span>
+    {% elif record.status == 'overdue_90_plus' %}
+    <span class="badge bg-danger fs-6">Свыше 90 дней</span>
+    {% elif record.status == 'doubtful' %}
+    <span class="badge bg-dark fs-6">Сомнительная</span>
+    {% endif %}
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-7">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-clipboard-data me-2"></i><strong>Данные записи</strong></div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-4">Контрагент</dt>
+                    <dd class="col-8">
+                        <a href="{% url 'counterparties:detail' record.counterparty.pk %}">{{ record.counterparty.name }}</a>
+                        {% if record.counterparty.is_key_supplier %}<span class="badge bg-warning text-dark ms-1">Ключевой</span>{% endif %}
+                    </dd>
+                    <dt class="col-4">Договор</dt>
+                    <dd class="col-8">{{ record.contract|default:"—" }}</dd>
+                    <dt class="col-4">Менеджер</dt>
+                    <dd class="col-8">{{ record.responsible_manager|default:"—" }}</dd>
+                    <dt class="col-4">Плановая дата оплаты</dt>
+                    <dd class="col-8">
+                        {{ record.planned_payment_date|date:"d.m.Y" }}
+                        {% if record.overdue_days > 0 %}
+                        <span class="badge bg-danger ms-1">просрочено {{ record.overdue_days }} дн.</span>
+                        {% endif %}
+                    </dd>
+                    <dt class="col-4">Сумма задолженности</dt>
+                    <dd class="col-8 fw-bold fs-5">{{ record.amount_rub|floatformat:2|intcomma }} ₽</dd>
+                    {% if record.amount_currency %}
+                    <dt class="col-4">В валюте договора</dt>
+                    <dd class="col-8">{{ record.amount_currency|floatformat:2|intcomma }}</dd>
+                    {% endif %}
+                    <dt class="col-4">Сумма просрочки</dt>
+                    <dd class="col-8 {% if record.overdue_amount > 0 %}text-danger fw-bold{% endif %}">{{ record.overdue_amount|floatformat:2|intcomma }} ₽</dd>
+                    <dt class="col-4">Дней просрочки</dt>
+                    <dd class="col-8">
+                        <span class="fw-bold {% if record.overdue_days > 60 %}text-danger{% elif record.overdue_days > 30 %}text-warning{% endif %}">
+                            {{ record.overdue_days }}
+                        </span>
+                    </dd>
+                    <dt class="col-4">Статус</dt>
+                    <dd class="col-8">{{ record.get_status_display }}</dd>
+                    <dt class="col-4">Дата записи</dt>
+                    <dd class="col-8">{{ record.record_date|date:"d.m.Y" }}</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ссылка на документ-основание -->
+    <div class="col-lg-5">
+        <div class="card border-primary">
+            <div class="card-header bg-primary text-white">
+                <i class="bi bi-file-earmark-text me-2"></i><strong>Документ-основание</strong>
+            </div>
+            <div class="card-body">
+                <dl class="row mb-3">
+                    <dt class="col-5">Номер</dt>
+                    <dd class="col-7"><code>{{ record.source_document.number }}</code></dd>
+                    <dt class="col-5">Дата</dt>
+                    <dd class="col-7">{{ record.source_document.date|date:"d.m.Y" }}</dd>
+                    <dt class="col-5">Сумма документа</dt>
+                    <dd class="col-7 fw-bold">{{ record.source_document.amount|floatformat:2|intcomma }} ₽</dd>
+                    <dt class="col-5">Оплачено</dt>
+                    <dd class="col-7">{{ record.source_document.paid_amount|floatformat:2|intcomma }} ₽</dd>
+                    <dt class="col-5">Остаток</dt>
+                    <dd class="col-7 text-danger fw-bold">{{ record.source_document.outstanding_amount|floatformat:2|intcomma }} ₽</dd>
+                    <dt class="col-5">Статус</dt>
+                    <dd class="col-7">
+                        {% if record.source_document.is_paid %}<span class="badge bg-success">Оплачен</span>
+                        {% else %}<span class="badge bg-warning text-dark">Не оплачен</span>{% endif %}
+                    </dd>
+                </dl>
+                <a href="{% url 'documents:receipt_detail' record.source_document.pk %}" class="btn btn-primary w-100">
+                    <i class="bi bi-box-arrow-up-right me-1"></i>Открыть документ
+                </a>
+                {% if user.is_admin or user.is_accountant %}
+                <a href="{% url 'documents:receipt_detail' record.source_document.pk %}" class="btn btn-outline-primary w-100 mt-2">
+                    <i class="bi bi-credit-card me-1"></i>Изменить статус оплаты
+                </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Быстрые ссылки -->
+        <div class="card mt-3">
+            <div class="card-header"><i class="bi bi-link-45deg me-2"></i><strong>Связанные данные</strong></div>
+            <div class="card-body">
+                <a href="{% url 'counterparties:detail' record.counterparty.pk %}" class="btn btn-outline-secondary btn-sm w-100 mb-2 text-start">
+                    <i class="bi bi-building me-2"></i>Карточка контрагента
+                </a>
+                <a href="{% url 'registers:debt_register' %}?search={{ record.counterparty.name }}" class="btn btn-outline-secondary btn-sm w-100 mb-2 text-start">
+                    <i class="bi bi-clipboard-data me-2"></i>Все записи по контрагенту
+                </a>
+                <a href="{% url 'payments:calendar' %}" class="btn btn-outline-secondary btn-sm w-100 text-start">
+                    <i class="bi bi-calendar3 me-2"></i>Платёжный календарь
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}

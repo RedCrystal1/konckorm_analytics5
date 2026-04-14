@@ -1,15 +1,79 @@
 {% extends "base.html" %}
+{% load humanize %}
 {% block title %}Договоры{% endblock %}
 {% block content %}
-<h2>Договоры</h2>
-<table class="table table-hover table-sm mt-3">
-<thead><tr><th>Номер</th><th>Контрагент</th><th>Дата</th><th>Вид</th><th>Условия</th><th>Срок</th></tr></thead>
-<tbody>
-{% for c in contracts %}
-<tr><td><a href="{% url 'counterparties:contract_detail' c.pk %}">{{ c.number }}</a></td>
-<td>{{ c.counterparty.name|truncatechars:30 }}</td><td>{{ c.date|date:"d.m.Y" }}</td>
-<td>{{ c.get_kind_display }}</td><td>{{ c.get_payment_term_type_display }}</td><td>{{ c.payment_days }} дн.</td></tr>
-{% endfor %}
-</tbody></table>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-0">Договоры</h2>
+        <small class="text-muted">Реестр договоров с поставщиками</small>
+    </div>
+    {% if user.is_admin or user.is_accountant %}
+    <a href="{% url 'counterparties:contract_create' %}" class="btn btn-primary">
+        <i class="bi bi-plus-lg me-1"></i>Новый договор
+    </a>
+    {% endif %}
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Номер</th>
+                    <th>Контрагент</th>
+                    <th>Дата</th>
+                    <th>Вид</th>
+                    <th>Условия</th>
+                    <th class="text-end">Лимит</th>
+                    <th class="text-center">Статус</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for c in contracts %}
+            <tr onclick="window.location='{% url 'counterparties:contract_detail' c.pk %}'" style="cursor:pointer">
+                <td><code>{{ c.number }}</code></td>
+                <td>
+                    <div class="fw-semibold">{{ c.counterparty.name|truncatechars:28 }}</div>
+                    {% if c.counterparty.is_key_supplier %}<span class="badge bg-warning text-dark" style="font-size:0.65rem">★ Ключевой</span>{% endif %}
+                </td>
+                <td>{{ c.date|date:"d.m.Y" }}</td>
+                <td>
+                    {% if c.kind == 'supply' %}<span class="badge bg-success">Поставка</span>
+                    {% elif c.kind == 'service' %}<span class="badge bg-info text-dark">Услуги</span>
+                    {% elif c.kind == 'work' %}<span class="badge bg-primary">Подряд</span>
+                    {% elif c.kind == 'lease' %}<span class="badge bg-secondary">Аренда</span>{% endif %}
+                </td>
+                <td>
+                    {{ c.get_payment_term_type_display }}
+                    <small class="text-muted">({{ c.payment_days }} дн.)</small>
+                </td>
+                <td class="text-end">
+                    {% if c.credit_limit %}{{ c.credit_limit|floatformat:0|intcomma }} ₽{% else %}<span class="text-muted">—</span>{% endif %}
+                </td>
+                <td class="text-center">
+                    {% if c.is_active %}<span class="badge bg-success">Действует</span>
+                    {% else %}<span class="badge bg-secondary">Неактивен</span>{% endif %}
+                </td>
+                <td>
+                    {% if user.is_admin or user.is_accountant %}
+                    <a href="{% url 'counterparties:contract_edit' c.pk %}" class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation()">
+                        <i class="bi bi-pencil"></i>
+                    </a>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="8" class="text-center py-4">
+                    <i class="bi bi-file-earmark-ruled text-muted fs-3 d-block mb-2"></i>
+                    <span class="text-muted">Договоров нет</span>
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
 {% include "partials/_pagination.html" %}
 {% endblock %}

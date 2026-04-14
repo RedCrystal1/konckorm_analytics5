@@ -1,85 +1,79 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
-from django.db.models import Q
+from django.db.models import Count, Q, Sum
 from django.shortcuts import get_object_or_404, redirect, render
 
 from apps.accounts.decorators import accountant_or_admin_required
+from apps.analytics.models import AnalyticsSnapshot
 
-from .filters import ContractFilter, CounterpartyFilter
+from .filters import ContractFilter
 from .forms import ContractForm, CounterpartyForm
 from .models import Contract, Counterparty
-from .services import create_history_snapshot, get_counterparty_debt_summary
 
 
 @login_required
 def counterparty_list_view(request):
-    """Список контрагентов с фильтрацией."""
     qs = Counterparty.objects.select_related("responsible_manager").all()
-
-    # Менеджер по закупкам видит только своих
     if request.user.is_procurement:
         qs = qs.filter(
             Q(responsible_manager=request.user)
             | Q(user_access__user=request.user)
         ).distinct()
 
-    f = CounterpartyFilter(request.GET, queryset=qs)
-    paginator = Paginator(f.qs, 25)
-    page = paginator.get_page(request.GET.get("page"))
+    search = request.GET.get("search", "").strip()
+    if search:
+        qs = qs.filter(Q(name__icontains=search) | Q(inn__icontains=search))
 
+    is_key = request.GET.get("is_key_supplier")
+    if is_key == "true":
+        qs = qs.filter(is_key_supplier=True)
+    elif is_key == "false":
+        qs = qs.filter(is_key_supplier=False)
+
+    paginator = Paginator(qs, 25)
+    page = paginator.get_page(request.GET.get("page"))
     return render(
         request,
         "counterparties/counterparty_list.html",
-        {"page_obj": page, "filter": f, "counterparties": page},
+        {"page_obj": page, "counterparties": page},
     )
 
 
 @login_required
 def counterparty_detail_view(request, pk):
-    """Карточка контрагента."""
+    from apps.reconciliation.models import Discrepancy, ReconciliationAct
+    from apps.registers.models import DebtByTerms
+
     cp = get_object_or_404(
         Counterparty.objects.select_related("responsible_manager"), pk=pk
     )
-
-    # Проверка доступа для менеджеров по закупкам
-    if request.user.is_procurement:
-        has_access = (
-            cp.responsible_manager == request.user
-            or cp.user_access.filter(user=request.user).exists()
-        )
-        if not has_access:
-            from django.core.exceptions import PermissionDenied
-            raise PermissionDenied
-
     contracts = cp.contracts.all()
-    debt_summary = get_counterparty_debt_summary(cp)
 
-    # История задолженности для графика
-    from apps.registers.models import DebtByTerms
+    # Сводка задолженности
+    debt_qs = DebtByTerms.objects.filter(counterparty=cp)
+    debt_summary = {
+        "total": debt_qs.aggregate(s=Sum("amount_rub"))["s"] or 0,
+        "overdue": debt_qs.exclude(status="current").aggregate(s=Sum("amount_rub"))["s"] or 0,
+        "count": debt_qs.count(),
+        "overdue_count": debt_qs.exclude(status="current").count(),
+    }
 
-    debt_history = list(
-        DebtByTerms.objects.filter(counterparty=cp)
-        .order_by("record_date")
-        .values("record_date", "amount_rub", "overdue_amount")[:60]
+    # История задолженности для графика (из KPI-снимков)
+    snapshots = list(
+        AnalyticsSnapshot.objects.order_by("date").values("date", "total_debt", "overdue_debt")[:60]
     )
+    debt_history = []
+    for s in snapshots:
+        debt_history.append({
+            "record_date": s["date"],
+            "amount_rub": s["total_debt"],
+            "overdue_amount": s["overdue_debt"],
+        })
 
     # Последняя сверка
-    from apps.reconciliation.models import Discrepancy, ReconciliationAct
-
-    last_reconciliation = (
-        ReconciliationAct.objects.filter(counterparty=cp)
-        .order_by("-period_end")
-        .first()
-    )
-    open_discrepancies = []
-    if last_reconciliation:
-        open_discrepancies = list(
-            Discrepancy.objects.filter(
-                reconciliation_act=last_reconciliation,
-                status__in=[Discrepancy.Status.OPEN, Discrepancy.Status.IN_PROGRESS],
-            )
-        )
+    last_reconciliation = ReconciliationAct.objects.filter(counterparty=cp).order_by("-created_at").first()
+    open_discrepancies = Discrepancy.objects.filter(counterparty=cp, status="open") if last_reconciliation else []
 
     return render(
         request,
@@ -118,7 +112,6 @@ def counterparty_update_view(request, pk):
     if request.method == "POST":
         form = CounterpartyForm(request.POST, instance=cp)
         if form.is_valid():
-            create_history_snapshot(cp, user=request.user)
             form.save()
             messages.success(request, f"Контрагент «{cp.name}» обновлён.")
             return redirect("counterparties:detail", pk=cp.pk)
@@ -154,10 +147,56 @@ def contract_detail_view(request, pk):
     contract = get_object_or_404(
         Contract.objects.select_related("counterparty"), pk=pk
     )
+    # Документы по этому договору
+    receipts = contract.receipts.order_by("-date")[:10]
+    payments = contract.payment_orders.order_by("-date")[:10] if hasattr(contract, "payment_orders") else []
     return render(
         request,
         "counterparties/contract_detail.html",
-        {"contract": contract},
+        {"contract": contract, "receipts": receipts, "payments": payments},
+    )
+
+
+@accountant_or_admin_required
+def contract_create_view(request):
+    """Создание нового договора."""
+    # Предзаполнение контрагента из GET-параметра
+    initial = {}
+    cp_pk = request.GET.get("counterparty")
+    if cp_pk:
+        initial["counterparty"] = cp_pk
+
+    if request.method == "POST":
+        form = ContractForm(request.POST)
+        if form.is_valid():
+            contract = form.save()
+            messages.success(request, f"Договор №{contract.number} создан.")
+            return redirect("counterparties:contract_detail", pk=contract.pk)
+    else:
+        form = ContractForm(initial=initial)
+    return render(
+        request,
+        "counterparties/contract_form.html",
+        {"form": form, "title": "Новый договор"},
+    )
+
+
+@accountant_or_admin_required
+def contract_update_view(request, pk):
+    """Редактирование договора."""
+    contract = get_object_or_404(Contract, pk=pk)
+    if request.method == "POST":
+        form = ContractForm(request.POST, instance=contract)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"Договор №{contract.number} обновлён.")
+            return redirect("counterparties:contract_detail", pk=contract.pk)
+    else:
+        form = ContractForm(instance=contract)
+    return render(
+        request,
+        "counterparties/contract_form.html",
+        {"form": form, "title": f"Редактирование договора №{contract.number}", "contract": contract},
     )
 
 
@@ -168,27 +207,16 @@ def contract_detail_view(request, pk):
 def htmx_counterparty_table(request):
     """HTMX: обновляемая таблица контрагентов."""
     qs = Counterparty.objects.select_related("responsible_manager").all()
-    if request.user.is_procurement:
-        qs = qs.filter(
-            Q(responsible_manager=request.user)
-            | Q(user_access__user=request.user)
-        ).distinct()
-
     search = request.GET.get("search", "").strip()
     if search:
-        qs = qs.filter(
-            Q(name__icontains=search) | Q(inn__icontains=search)
-        )
-
+        qs = qs.filter(Q(name__icontains=search) | Q(inn__icontains=search))
     is_key = request.GET.get("is_key_supplier")
     if is_key == "true":
         qs = qs.filter(is_key_supplier=True)
     elif is_key == "false":
         qs = qs.filter(is_key_supplier=False)
-
     paginator = Paginator(qs, 25)
     page = paginator.get_page(request.GET.get("page"))
-
     return render(
         request,
         "counterparties/partials/_counterparty_table.html",
@@ -198,31 +226,26 @@ def htmx_counterparty_table(request):
 
 @login_required
 def htmx_debt_history(request, pk):
-    """HTMX: история задолженности контрагента."""
-    cp = get_object_or_404(Counterparty, pk=pk)
     from apps.registers.models import DebtByTerms
 
-    records = DebtByTerms.objects.filter(counterparty=cp).order_by("-record_date")[:50]
+    cp = get_object_or_404(Counterparty, pk=pk)
+    records = DebtByTerms.objects.filter(counterparty=cp).order_by("-record_date")[:30]
     return render(
         request,
         "counterparties/partials/_debt_history.html",
-        {"records": records, "counterparty": cp},
+        {"records": records},
     )
 
 
 @login_required
 def htmx_counterparty_chart(request, pk):
-    """HTMX: график задолженности контрагента (возвращает данные для Chart.js)."""
     cp = get_object_or_404(Counterparty, pk=pk)
-    from apps.registers.models import DebtByTerms
-
-    records = (
-        DebtByTerms.objects.filter(counterparty=cp)
-        .order_by("record_date")
-        .values("record_date", "amount_rub", "overdue_amount")[:30]
+    snapshots = list(
+        AnalyticsSnapshot.objects.order_by("date").values("date", "total_debt", "overdue_debt")[:60]
     )
+    history = [{"record_date": s["date"], "amount_rub": s["total_debt"]} for s in snapshots]
     return render(
         request,
         "counterparties/partials/_debt_chart.html",
-        {"records": list(records), "counterparty": cp},
+        {"history": history, "counterparty": cp},
     )
