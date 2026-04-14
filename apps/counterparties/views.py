@@ -148,7 +148,12 @@ def contract_detail_view(request, pk):
         Contract.objects.select_related("counterparty"), pk=pk
     )
     # Документы по этому договору
-    receipts = contract.receipts.order_by("-date")[:10]
+    # receipts = contract.receipts.order_by("-date")[:10]
+    from apps.documents.models import GoodsReceipt
+
+    receipts = GoodsReceipt.objects.filter(
+        counterparty=contract.counterparty
+    ).order_by("-date")[:10]
     payments = contract.payment_orders.order_by("-date")[:10] if hasattr(contract, "payment_orders") else []
     return render(
         request,
