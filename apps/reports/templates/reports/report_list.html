@@ -1,6 +1,58 @@
+
 {% extends "base.html" %}
+{% load humanize %}
 {% block title %}История отчётов{% endblock %}
 {% block content %}
-<h2>История отчётов</h2>
-<p class="text-muted mt-3">Функция в разработке.</p>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-0">История отчётов</h2>
+        <small class="text-muted">Ранее сформированные отчёты доступны для повторного скачивания</small>
+    </div>
+    <a href="{% url 'reports:generator' %}" class="btn btn-primary btn-sm">
+        <i class="bi bi-plus-lg me-1"></i>Новый отчёт
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Дата создания</th>
+                    <th>Тип отчёта</th>
+                    <th>Формат</th>
+                    <th>Период</th>
+                    <th>Контрагент</th>
+                    <th>Размер</th>
+                    <th>Пользователь</th>
+                    <th class="text-end">Действия</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in reports %}
+                <tr>
+                    <td>{{ r.created_at|date:"d.m.Y H:i" }}</td>
+                    <td>{{ r.get_report_type_display }}</td>
+                    <td><span class="badge bg-secondary">{{ r.get_output_format_display }}</span></td>
+                    <td>
+                        {% if r.date_from or r.date_to %}
+                            {{ r.date_from|date:"d.m.Y"|default:"—" }} — {{ r.date_to|date:"d.m.Y"|default:"—" }}
+                        {% else %}—{% endif %}
+                    </td>
+                    <td>{{ r.counterparty.name|default:"Все" }}</td>
+                    <td>{{ r.file_size|filesizeformat }}</td>
+                    <td>{{ r.created_by.get_full_name|default:r.created_by.username|default:"—" }}</td>
+                    <td class="text-end">
+                        <a href="{% url 'reports:download' r.pk %}" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-download me-1"></i>Скачать
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="8" class="text-center text-muted py-4">История пуста — отчёты ещё не формировались.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
 {% endblock %}

@@ -39,9 +39,9 @@ def counterparty_list_view(request):
         {"page_obj": page, "counterparties": page},
     )
 
-
 @login_required
 def counterparty_detail_view(request, pk):
+    from datetime import date, timedelta
     from apps.reconciliation.models import Discrepancy, ReconciliationAct
     from apps.registers.models import DebtByTerms
 
@@ -50,26 +50,64 @@ def counterparty_detail_view(request, pk):
     )
     contracts = cp.contracts.all()
 
-    # Сводка задолженности
-    debt_qs = DebtByTerms.objects.filter(counterparty=cp)
+    # Период графика: 7 / 14 / 30 дней
+    allowed_periods = [7, 14, 30]
+    try:
+        period = int(request.GET.get("period", 30))
+    except (TypeError, ValueError):
+        period = 30
+    if period not in allowed_periods:
+        period = 30
+
+    # Сводка задолженности (на последнюю дату записи)
+    latest_date = (
+        DebtByTerms.objects.filter(counterparty=cp)
+        .order_by("-record_date")
+        .values_list("record_date", flat=True)
+        .first()
+    )
+    debt_qs = (
+        DebtByTerms.objects.filter(counterparty=cp, record_date=latest_date)
+        if latest_date else DebtByTerms.objects.none()
+    )
     debt_summary = {
-        "total": debt_qs.aggregate(s=Sum("amount_rub"))["s"] or 0,
-        "overdue": debt_qs.exclude(status="current").aggregate(s=Sum("amount_rub"))["s"] or 0,
-        "count": debt_qs.count(),
+        "total_debt": debt_qs.aggregate(s=Sum("amount_rub"))["s"] or 0,
+        "overdue_amount": debt_qs.exclude(status="current").aggregate(s=Sum("amount_rub"))["s"] or 0,
+        "unpaid_count": debt_qs.count(),
         "overdue_count": debt_qs.exclude(status="current").count(),
     }
 
-    # История задолженности для графика (из KPI-снимков)
-    snapshots = list(
-        AnalyticsSnapshot.objects.order_by("date").values("date", "total_debt", "overdue_debt")[:60]
+    # История задолженности за выбранный период
+    today = date.today()
+    start = today - timedelta(days=period)
+
+    raw_history = (
+        DebtByTerms.objects.filter(counterparty=cp, record_date__gte=start)
+        .values("record_date")
+        .annotate(
+            total_amount=Sum("amount_rub"),
+            overdue_total=Sum("amount_rub", filter=~Q(status="current")),
+        )
+        .order_by("record_date")
     )
+
+    hist_map = {r["record_date"]: r for r in raw_history}
     debt_history = []
-    for s in snapshots:
+    last_amount = 0
+    last_overdue = 0
+    for i in range(period + 1):
+        d = start + timedelta(days=i)
+        if d in hist_map:
+            last_amount = float(hist_map[d]["total_amount"] or 0)
+            last_overdue = float(hist_map[d]["overdue_total"] or 0)
         debt_history.append({
-            "record_date": s["date"],
-            "amount_rub": s["total_debt"],
-            "overdue_amount": s["overdue_debt"],
+            "record_date": d,
+            "amount_rub": last_amount,
+            "overdue_amount": last_overdue,
         })
+
+    if not hist_map:
+        debt_history = []
 
     # Последняя сверка
     last_reconciliation = ReconciliationAct.objects.filter(counterparty=cp).order_by("-created_at").first()
@@ -85,9 +123,10 @@ def counterparty_detail_view(request, pk):
             "debt_history": debt_history,
             "last_reconciliation": last_reconciliation,
             "open_discrepancies": open_discrepancies,
+            "chart_period": period,
+            "chart_periods": allowed_periods,
         },
     )
-
 
 @accountant_or_admin_required
 def counterparty_create_view(request):
