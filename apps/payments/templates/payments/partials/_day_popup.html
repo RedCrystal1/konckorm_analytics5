@@ -1,0 +1,125 @@
+{% load humanize %}
+{# Попап со списком всех платежей выбранного дня. Загружается через HTMX в #dayPopup. #}
+
+<div class="day-popup-overlay" onclick="closeDayPopup()"></div>
+
+<div class="day-popup">
+  {# Шапка попапа #}
+  <div class="day-popup-h {% if is_cash_gap %}is-gap{% elif is_today %}is-today{% endif %}">
+    <div class="day-popup-h-l">
+      <div class="day-popup-d">
+        {{ day.day }}
+        <span class="day-popup-m">{{ day|date:"E" }}</span>
+      </div>
+      <div>
+        <div class="day-popup-title">{{ day|date:"l" }}</div>
+        <div class="day-popup-sub">
+          {% if payments_data %}
+            {{ payments_data|length }} платеж{{ payments_data|length|pluralize:"и,ей" }} · {{ total_amount|floatformat:0|intcomma }} ₽
+          {% else %}
+            Нет запланированных платежей
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    <button class="day-popup-close" onclick="closeDayPopup()" title="Закрыть (Esc)">
+      <i class="bi bi-x-lg"></i>
+    </button>
+  </div>
+
+  {# Алерт кассового разрыва, если есть #}
+  {% if is_cash_gap and balance %}
+  <div class="day-popup-alert">
+    <i class="bi bi-exclamation-triangle"></i>
+    <div>
+      <b>Прогнозируемый кассовый разрыв:</b>
+      −{{ balance.closing_balance|floatformat:0|intcomma }} ₽
+    </div>
+    <a href="{% url 'payments:alerts' %}">Подробнее →</a>
+  </div>
+  {% endif %}
+
+  {# Список платежей #}
+  {% if payments_data %}
+  <div class="day-popup-list">
+    {% for pd in payments_data %}
+    {% with p=pd.obj %}
+    <a class="day-popup-row {% if pd.is_overdue %}is-overdue{% elif p.status == 'completed' %}is-paid{% endif %}"
+       href="{% if p.source_document %}{% url 'documents:receipt_detail' p.source_document.pk %}{% else %}{% url 'counterparties:detail' p.counterparty.pk %}{% endif %}">
+      <div class="day-popup-row-mark"
+           style="background:{% if pd.is_overdue %}var(--bad){% elif p.status == 'completed' %}var(--ok){% else %}var(--info){% endif %}">
+        {% if pd.is_overdue %}<i class="bi bi-exclamation-lg"></i>
+        {% elif p.status == 'completed' %}<i class="bi bi-check-lg"></i>
+        {% else %}<i class="bi bi-clock"></i>{% endif %}
+      </div>
+      <div class="day-popup-row-main">
+        <div class="day-popup-row-name">
+          {% if p.counterparty.is_key_supplier %}<span style="color:var(--purple)">★</span> {% endif %}
+          {{ p.counterparty.name }}
+        </div>
+        <div class="day-popup-row-meta">
+          {% if p.source_document %}
+            <span class="mono">{{ p.source_document.number }}</span>
+          {% endif %}
+          {% if p.contract %}
+            · договор {{ p.contract.number }}
+          {% endif %}
+          {% if p.priority == 'high' %}
+            · <span class="chip chip-warn" style="font-size:9.5px;padding:1px 5px">высокий</span>
+          {% endif %}
+          {% if pd.is_overdue %}
+            · <span class="chip chip-bad" style="font-size:9.5px;padding:1px 5px">просрочен</span>
+          {% endif %}
+        </div>
+      </div>
+      <div class="day-popup-row-amt {% if pd.is_overdue %}bad{% elif p.status == 'completed' %}ok{% endif %}">
+        {{ p.amount|floatformat:0|intcomma }} ₽
+      </div>
+      <i class="bi bi-chevron-right" style="color:var(--text-3);margin-left:4px;font-size:13px"></i>
+    </a>
+    {% endwith %}
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="day-popup-empty">
+    <i class="bi bi-calendar-x"></i>
+    <div>На этот день платежей не запланировано</div>
+  </div>
+  {% endif %}
+
+  {# Подвал — баланс дня #}
+  {% if balance %}
+  <div class="day-popup-foot">
+    <div class="day-popup-foot-row">
+      <span>Остаток на начало:</span>
+      <b class="mono">{{ balance.opening_balance|floatformat:0|intcomma }} ₽</b>
+    </div>
+    {% if balance.total_outflow %}
+    <div class="day-popup-foot-row">
+      <span>Плановые оплаты:</span>
+      <b class="mono" style="color:var(--bad)">−{{ balance.total_outflow|floatformat:0|intcomma }} ₽</b>
+    </div>
+    {% endif %}
+    <div class="day-popup-foot-row">
+      <span>Остаток на конец:</span>
+      <b class="mono" style="color:{% if balance.is_cash_gap %}var(--bad){% else %}var(--ok){% endif %}">
+        {% if balance.is_cash_gap %}−{% endif %}{{ balance.closing_balance|floatformat:0|intcomma }} ₽
+      </b>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+
+<script>
+(function(){
+  // ESC закрывает попап
+  function escHandler(e) {
+    if (e.key === 'Escape') {
+      closeDayPopup();
+      document.removeEventListener('keydown', escHandler);
+    }
+  }
+  document.addEventListener('keydown', escHandler);
+})();
+</script>

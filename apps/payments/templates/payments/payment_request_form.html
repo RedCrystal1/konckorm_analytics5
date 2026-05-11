@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}{{ title|default:"Заявка на оплату" }}{% endblock %}
+{% block breadcrumbs %}
+  <a href="{% url 'dashboard:home' %}">Главная</a>
+  <i class="bi bi-chevron-right sep" style="font-size:11px"></i>
+  <a href="{% url 'payments:request_list' %}">Заявки на оплату</a>
+  <i class="bi bi-chevron-right sep" style="font-size:11px"></i>
+  <b>{{ title|default:"Новая заявка" }}</b>
+{% endblock %}
+
+{% block content %}
+<div class="page-content" style="padding:0 24px 24px;max-width:780px">
+
+  <div class="page-head" style="margin:0 -24px 14px;padding:14px 24px;border-radius:0">
+    <div>
+      <h1 class="ph-title" style="margin:0">{{ title|default:"Новая заявка на оплату" }}</h1>
+      <div class="ph-sub">
+        {% if payment_request %}
+          Редактирование заявки #{{ payment_request.pk }} ·
+          <span style="color:{{ payment_request.status_color }}">{{ payment_request.get_status_display }}</span>
+        {% else %}
+          Заявка пройдёт согласование у бухгалтера, после чего будет отправлена в 1С
+        {% endif %}
+      </div>
+    </div>
+    <div class="page-head-r">
+      <a href="{% url 'payments:request_list' %}" class="btn btn-outline-primary btn-sm">
+        <i class="bi bi-chevron-left"></i> К списку
+      </a>
+    </div>
+  </div>
+
+  {# ─── Форма ─────────────────────────────────────────────── #}
+  <form method="post" novalidate>
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+      <div class="card" style="padding:12px 14px;margin-bottom:14px;background:var(--bad-soft);border-left:3px solid var(--bad)">
+        {% for err in form.non_field_errors %}
+          <div style="color:var(--bad);font-size:12.5px">
+            <i class="bi bi-exclamation-triangle"></i> {{ err }}
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <div class="card">
+      <div class="card-h">
+        <div class="card-h-l"><i class="bi bi-receipt ico"></i>Реквизиты заявки</div>
+      </div>
+
+      <div style="padding:16px;display:grid;grid-template-columns:1fr 1fr;gap:14px">
+
+        {# Контрагент #}
+        <div style="grid-column:1/-1">
+          <label class="form-label" style="font-size:11.5px;font-weight:500;color:var(--text-2);margin-bottom:4px;display:block">
+            Поставщик *
+          </label>
+          {{ form.counterparty }}
+          {% if form.counterparty.errors %}
+            <div style="color:var(--bad);font-size:11px;margin-top:4px">{{ form.counterparty.errors.0 }}</div>
+          {% endif %}
+        </div>
+
+        {# Договор + Поступление #}
+        <div>
+          <label class="form-label" style="font-size:11.5px;font-weight:500;color:var(--text-2);margin-bottom:4px;display:block">
+            Договор
+          </label>
+          {{ form.contract }}
+          {% if form.contract.errors %}
+            <div style="color:var(--bad);font-size:11px;margin-top:4px">{{ form.contract.errors.0 }}</div>
+          {% endif %}
+        </div>
+
+        <div>
+          <label class="form-label" style="font-size:11.5px;font-weight:500;color:var(--text-2);margin-bottom:4px;display:block">
+            Поступление-основание
+          </label>
+          {{ form.related_receipt }}
+          {% if form.related_receipt.errors %}
+            <div style="color:var(--bad);font-size:11px;margin-top:4px">{{ form.related_receipt.errors.0 }}</div>
+          {% endif %}
+        </div>
+
+        {# Сумма + Дата #}
+        <div>
+          <label class="form-label" style="font-size:11.5px;font-weight:500;color:var(--text-2);margin-bottom:4px;display:block">
+            Сумма к оплате, ₽ *
+          </label>
+          {{ form.amount }}
+          {% if form.amount.errors %}
+            <div style="color:var(--bad);font-size:11px;margin-top:4px">{{ form.amount.errors.0 }}</div>
+          {% endif %}
+        </div>
+
+        <div>
+          <label class="form-label" style="font-size:11.5px;font-weight:500;color:var(--text-2);margin-bottom:4px;display:block">
+            Планируемая дата платежа *
+          </label>
+          {{ form.planned_date }}
+          {% if form.planned_date.errors %}
+            <div style="color:var(--bad);font-size:11px;margin-top:4px">{{ form.planned_date.errors.0 }}</div>
+          {% endif %}
+        </div>
+
+        {# Приоритет #}
+        <div style="grid-column:1/-1">
+          <label class="form-label" style="font-size:11.5px;font-weight:500;color:var(--text-2);margin-bottom:4px;display:block">
+            Приоритет
+          </label>
+          {{ form.priority }}
+          {% if form.priority.errors %}
+            <div style="color:var(--bad);font-size:11px;margin-top:4px">{{ form.priority.errors.0 }}</div>
+          {% endif %}
+        </div>
+
+        {# Назначение платежа #}
+        <div style="grid-column:1/-1">
+          <label class="form-label" style="font-size:11.5px;font-weight:500;color:var(--text-2);margin-bottom:4px;display:block">
+            Назначение платежа *
+          </label>
+          {{ form.purpose }}
+          {% if form.purpose.errors %}
+            <div style="color:var(--bad);font-size:11px;margin-top:4px">{{ form.purpose.errors.0 }}</div>
+          {% endif %}
+          <div style="font-size:10.5px;color:var(--text-3);margin-top:4px">
+            <i class="bi bi-info-circle"></i> Этот текст будет передан в 1С в поле «Назначение платежа»
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    {# ─── Кнопки действий ──────────────────────────── #}
+    <div style="margin-top:14px;display:flex;gap:8px;justify-content:flex-end;align-items:center">
+      <a href="{% url 'payments:request_list' %}" class="btn btn-outline-primary btn-sm">
+        Отменить
+      </a>
+      <button type="submit" name="action" value="save" class="btn btn-outline-primary btn-sm">
+        <i class="bi bi-save"></i> Сохранить как черновик
+      </button>
+      <button type="submit" name="action" value="submit" class="btn btn-primary btn-sm">
+        <i class="bi bi-send"></i> Сохранить и отправить на согласование
+      </button>
+    </div>
+  </form>
+
+</div>
+
+{% block extra_css %}
+<style>
+  /* Стилизация полей формы под общую дизайн-систему */
+  form select, form input[type="text"], form input[type="number"],
+  form input[type="date"], form textarea {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 12.5px;
+    color: var(--text);
+    background: var(--surface);
+    font-family: inherit;
+    box-sizing: border-box;
+  }
+  form select:focus, form input:focus, form textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+  form textarea {
+    min-height: 70px;
+    resize: vertical;
+    line-height: 1.5;
+  }
+</style>
+{% endblock %}
+{% endblock %}

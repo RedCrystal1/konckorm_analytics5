@@ -1,0 +1,101 @@
+{% load humanize %}
+{# ─── БЛОК: САЛЬДО ПО СЧЁТУ 60 ───────────────────────────────────────────── #}
+{# Используется на странице карточки контрагента.                            #}
+{# Ожидает в контексте:                                                       #}
+{#   counterparty, acc60_01 (balance/credit/debit), acc60_02, acc60_date,    #}
+{#   acc60_match (bool — сходится ли с debt_summary.total_debt)              #}
+{# ────────────────────────────────────────────────────────────────────────── #}
+<div class="card">
+  <div class="card-h">
+    <div class="card-h-l">
+      <i class="bi bi-bank ico"></i>
+      <span>Сальдо по счёту 60</span>
+      {% if acc60_date %}
+        <span class="freshness-dot" title="Расчёт на {{ acc60_date|date:'d.m.Y' }}"></span>
+      {% endif %}
+    </div>
+    <div class="card-h-r">
+      {% if user.is_admin or user.is_accountant %}
+        <a href="?recalc_60=1"
+           class="btn-link"
+           style="font-size:11.5px"
+           title="Пересчитать сальдо счёта 60 на основе документов">
+          <i class="bi bi-arrow-clockwise"></i> Обновить
+        </a>
+      {% endif %}
+    </div>
+  </div>
+
+  {# 60.01 - "Расчёты с поставщиками" (мы должны) #}
+  <div class="kpi" style="border-bottom:1px solid var(--border)">
+    <div class="kpi-l" style="text-transform:none;letter-spacing:0;font-size:11px;display:flex;align-items:center;gap:6px">
+      <span class="mono" style="font-size:10px;background:var(--surface-2);padding:1px 5px;border-radius:3px;color:var(--text-2)">60.01</span>
+      Расчёты с поставщиками
+    </div>
+    <div class="kpi-v" style="font-size:20px;color:{% if acc60_01.balance > 0 %}var(--bad){% else %}var(--text-3){% endif %}">
+      {% if acc60_01 %}
+        {{ acc60_01.balance|floatformat:0|intcomma }}<span class="u">₽</span>
+      {% else %}
+        0<span class="u">₽</span>
+      {% endif %}
+    </div>
+    {% if acc60_01 %}
+    <div class="kpi-foot" style="display:flex;gap:12px;font-size:10.5px;color:var(--text-3)">
+      <span>обороты: Кт <b class="mono" style="color:var(--text-2)">{{ acc60_01.credit|floatformat:0|intcomma }}</b> ₽</span>
+      <span>Дт <b class="mono" style="color:var(--text-2)">{{ acc60_01.debit|floatformat:0|intcomma }}</b> ₽</span>
+    </div>
+    {% endif %}
+  </div>
+
+  {# 60.02 - "Авансы выданные" (нам должны) #}
+  <div class="kpi" style="border-bottom:1px solid var(--border)">
+    <div class="kpi-l" style="text-transform:none;letter-spacing:0;font-size:11px;display:flex;align-items:center;gap:6px">
+      <span class="mono" style="font-size:10px;background:var(--surface-2);padding:1px 5px;border-radius:3px;color:var(--text-2)">60.02</span>
+      Авансы выданные
+    </div>
+    <div class="kpi-v" style="font-size:20px;color:{% if acc60_02.balance > 0 %}var(--ok){% else %}var(--text-3){% endif %}">
+      {% if acc60_02 %}
+        {{ acc60_02.balance|floatformat:0|intcomma }}<span class="u">₽</span>
+      {% else %}
+        0<span class="u">₽</span>
+      {% endif %}
+    </div>
+    {% if acc60_02.balance > 0 %}
+    <div class="kpi-foot" style="font-size:10.5px;color:var(--text-3)">
+      <i class="bi bi-arrow-up-right" style="color:var(--ok);font-size:10px"></i>
+      Контрагент нам должен поставить товара на эту сумму
+    </div>
+    {% endif %}
+  </div>
+
+  {# Сверка: совпадает ли расчётное сальдо с DebtByTerms #}
+  <div class="kpi">
+    <div class="kpi-l" style="text-transform:none;letter-spacing:0;font-size:11px">
+      Сверка с регистром задолженности
+    </div>
+    {% if acc60_match is None %}
+      <div class="kpi-v" style="font-size:13px;color:var(--text-3);font-weight:400">
+        <i class="bi bi-dash-circle" style="font-size:11px"></i>
+        нет данных
+      </div>
+    {% elif acc60_match %}
+      <div class="kpi-v" style="font-size:13px;color:var(--ok);font-weight:500">
+        <i class="bi bi-check-circle-fill" style="font-size:11px"></i>
+        совпадает
+      </div>
+      <div class="kpi-foot" style="font-size:10.5px;color:var(--text-3)">
+        Расчётный долг (<b class="mono">{{ debt_summary.total_debt|floatformat:0|intcomma }} ₽</b>)
+        = сальдо 60.01
+      </div>
+    {% else %}
+      <div class="kpi-v" style="font-size:13px;color:var(--warn);font-weight:500">
+        <i class="bi bi-exclamation-triangle-fill" style="font-size:11px"></i>
+        расхождение {{ acc60_diff|floatformat:0|intcomma }} ₽
+      </div>
+      <div class="kpi-foot" style="font-size:10.5px;color:var(--text-3)">
+        DebtByTerms: <b class="mono">{{ debt_summary.total_debt|floatformat:0|intcomma }}</b> ₽,
+        60.01: <b class="mono">{{ acc60_01.balance|floatformat:0|intcomma }}</b> ₽
+      </div>
+    {% endif %}
+  </div>
+</div>

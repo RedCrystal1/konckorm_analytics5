@@ -1,128 +1,345 @@
 {% extends "base.html" %}
 {% load humanize %}
-{% block title %}Платёжный календарь{% endblock %}
+
+{% block title %}Платёжный календарь · {{ month_name }} {{ year }}{% endblock %}
+{% block breadcrumbs %}
+  <a href="#">Анализ</a> <i class="bi bi-chevron-right sep" style="font-size:11px"></i>
+  <b>Платёжный календарь</b>
+{% endblock %}
+
+{# Подпанель с режимами вида (заменяет старую панель «День/Неделя/Месяц») #}
+{% block subpanel %}
+<div class="subpanel">
+  <div class="subpanel-tabs">
+    <a href="?year={{ year }}&month={{ month }}&view=month"
+       class="{% if view_mode == 'month' %}is-active{% endif %}">
+      <i class="bi bi-calendar3"></i>Месяц
+    </a>
+    <a href="?year={{ year }}&month={{ month }}&view=week"
+       class="{% if view_mode == 'week' %}is-active{% endif %}">
+      <i class="bi bi-calendar-range"></i>Неделя
+    </a>
+    <a href="?year={{ year }}&month={{ month }}&view=day"
+       class="{% if view_mode == 'day' %}is-active{% endif %}">
+      <i class="bi bi-calendar-day"></i>День
+    </a>
+    <a href="?year={{ year }}&month={{ month }}&view=list"
+       class="{% if view_mode == 'list' %}is-active{% endif %}">
+      <i class="bi bi-list"></i>Список
+    </a>
+    <a href="?year={{ year }}&month={{ month }}&view=forecast"
+       class="{% if view_mode == 'forecast' %}is-active{% endif %}">
+      <i class="bi bi-graph-up"></i>Прогноз ДС
+    </a>
+  </div>
+  <div class="subpanel-r">Период:&nbsp;<b style="color:var(--text);font-weight:500">{{ month_name }} {{ year }}</b></div>
+</div>
+{% endblock %}
+
 {% block content %}
-<h2>Платёжный календарь</h2>
+<div class="page-content" style="padding:0 24px 24px">
 
-<!-- Навигация по месяцам и режим отображения -->
-<div class="d-flex justify-content-between align-items-center my-3">
-    <div class="d-flex gap-2">
-        {% if prev_month %}
-        <a href="?year={{ prev_year }}&month={{ prev_month }}&view={{ view_mode }}" class="btn btn-outline-secondary btn-sm">&larr; Пред.</a>
-        {% endif %}
-        <strong class="align-self-center">{{ month_name }} {{ year }}</strong>
-        <a href="?year={{ next_year }}&month={{ next_month }}&view={{ view_mode }}" class="btn btn-outline-secondary btn-sm">След. &rarr;</a>
+  {# Заголовок страницы #}
+  <div class="page-head" style="margin:0 -24px 14px;padding:14px 24px;border-radius:0">
+    <div>
+      <h1 class="ph-title" style="margin:0">Платёжный календарь · {{ month_name }} {{ year }}</h1>
+      <div class="ph-sub">
+        <span class="live-dot"></span>
+        {{ month_summary.count }} платеж{{ month_summary.count|pluralize:"и,ей" }} на {{ month_summary.total|floatformat:0|intcomma }} ₽
+        {% if month_summary.paid %}· {{ month_summary.paid|floatformat:0|intcomma }} ₽ оплачено{% endif %}
+        {% if cash_gap_alerts %}· <span style="color:var(--bad)">кассовый разрыв {{ cash_gap_alerts.0.date|date:"d M" }}</span>{% endif %}
+      </div>
     </div>
-    <div class="btn-group btn-group-sm">
-        <a href="?year={{ year }}&month={{ month }}&view=day" class="btn btn-outline-primary {% if view_mode == 'day' %}active{% endif %}">День</a>
-        <a href="?year={{ year }}&month={{ month }}&view=week" class="btn btn-outline-primary {% if view_mode == 'week' %}active{% endif %}">Неделя</a>
-        <a href="?year={{ year }}&month={{ month }}&view=month" class="btn btn-outline-primary {% if view_mode == 'month' %}active{% endif %}">Месяц</a>
+    <div class="page-head-r">
+      <a href="?year={{ prev_year }}&month={{ prev_month }}&view={{ view_mode }}" class="btn btn-outline-primary btn-sm">
+        <i class="bi bi-chevron-left"></i>
+      </a>
+      <a href="?year={{ today.year }}&month={{ today.month }}&view={{ view_mode }}" class="btn btn-outline-primary btn-sm">
+        Сегодня
+      </a>
+      <a href="?year={{ next_year }}&month={{ next_month }}&view={{ view_mode }}" class="btn btn-outline-primary btn-sm">
+        <i class="bi bi-chevron-right"></i>
+      </a>
+      <a href="{% url 'payments:alerts' %}" class="btn btn-outline-primary btn-sm">
+        <i class="bi bi-exclamation-triangle"></i> Разрывы
+        {% if cash_gap_alerts %}<span class="badge bg-danger" style="margin-left:4px">{{ cash_gap_alerts|length }}</span>{% endif %}
+      </a>
     </div>
-</div>
+  </div>
 
-<!-- Легенда (кликабельная) -->
-<div class="mb-2 small">
-    <a href="{% url 'registers:debt_register' %}?status=current" class="badge bg-success text-decoration-none">Оплачен</a>
-    <a href="{% url 'registers:debt_register' %}?status=current" class="badge bg-warning text-dark text-decoration-none">Ожидается</a>
-    <a href="{% url 'registers:debt_register' %}" class="badge bg-danger text-decoration-none">Просрочен</a>
-    <a href="{% url 'payments:alerts' %}" class="badge bg-dark bg-opacity-10 text-dark border text-decoration-none">Кассовые разрывы</a>
-</div>
+  {# ==================== РЕЖИМ: МЕСЯЦ ==================== #}
+  {% if view_mode == 'month' %}
+  <div class="bento" style="padding:0">
 
-<!-- Календарная сетка -->
-<div class="card mb-3">
-    <div class="card-body p-2">
-        <table class="table table-bordered table-sm mb-0">
-            <thead>
-                <tr>
-                    <th class="text-center">Пн</th><th class="text-center">Вт</th>
-                    <th class="text-center">Ср</th><th class="text-center">Чт</th>
-                    <th class="text-center">Пт</th>
-                    <th class="text-center text-muted">Сб</th>
-                    <th class="text-center text-muted">Вс</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                {% for day in calendar_data %}
-                    <td class="{% if not day.in_month %}text-muted bg-light{% endif %} {% if day.is_cash_gap %}bg-danger bg-opacity-10{% endif %}"
-                        style="min-width:100px; min-height:70px; vertical-align:top; font-size:0.8rem;">
-                        <div class="fw-bold mb-1 {% if day.is_today %}text-primary{% endif %}">{{ day.date.day }}</div>
-                        {% for p in day.payments %}
-                            <div class="rounded px-1 mb-1 {% if p.status == 'completed' %}bg-success bg-opacity-10{% elif p.status == 'overdue' %}bg-danger bg-opacity-10{% else %}bg-warning bg-opacity-10{% endif %}">
-                                <small class="d-block text-truncate">{{ p.counterparty.name|truncatechars:15 }}</small>
-                                <small class="fw-bold">{{ p.amount|floatformat:0|intcomma }} ₽</small>
-                                {% if p.status == 'completed' %}<small class="text-success">✓</small>
-                                {% elif p.status == 'overdue' %}<small class="text-danger">!</small>
-                                {% endif %}
-                            </div>
-                        {% endfor %}
-                        {% if day.balance %}
-                            <div class="mt-1 border-top pt-1 {% if day.balance.is_cash_gap %}text-danger fw-bold{% else %}text-muted{% endif %}">
-                                <small>{{ day.balance.closing_balance|floatformat:0|intcomma }}</small>
-                            </div>
-                        {% endif %}
-                    </td>
-                    {% if forloop.counter|divisibleby:7 %}
-                </tr>
-                {% if not forloop.last %}<tr>{% endif %}
-                    {% endif %}
-                {% endfor %}
-                </tr>
-            </tbody>
-        </table>
+    {# Большой календарь — 2 колонки #}
+    <div class="card span-2">
+      <div class="card-h">
+        <div class="card-h-l">
+          <i class="bi bi-calendar3 ico"></i>
+          <span>{{ month_name }} {{ year }}</span>
+          <span class="freshness-dot"></span>
+        </div>
+        <div class="card-h-r">
+          <span class="meta">{{ month_summary.count }} платежей · {{ month_summary.total|floatformat:0|intcomma }} ₽</span>
+          <span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;margin-left:8px">
+            <span style="width:8px;height:8px;border-radius:2px;background:#dbeafe"></span>план
+          </span>
+          <span style="display:inline-flex;align-items:center;gap:5px;font-size:11px">
+            <span style="width:8px;height:8px;border-radius:2px;background:var(--ok-soft)"></span>опл.
+          </span>
+          <span style="display:inline-flex;align-items:center;gap:5px;font-size:11px">
+            <span style="width:8px;height:8px;border-radius:2px;background:var(--bad-soft)"></span>разрыв
+          </span>
+        </div>
+      </div>
+      {% include "payments/partials/_calendar_grid.html" %}
     </div>
-</div>
 
-<!-- График прогнозного остатка -->
-<div class="card">
-    <div class="card-header"><strong>Прогноз остатка денежных средств</strong></div>
-    <div class="card-body">
-        {% if forecast_data %}
-        <canvas id="forecastChart" height="150"></canvas>
+    {# Карточка кассового разрыва #}
+    {% if cash_gap_alerts %}
+    <div class="card gap-card">
+      <div class="card-h" style="background:rgba(255,255,255,.4);border-bottom-color:#fca5a5">
+        <div class="card-h-l" style="color:#7f1d1d">
+          <i class="bi bi-exclamation-triangle ico" style="color:var(--bad)"></i>
+          Разрыв {{ cash_gap_alerts.0.date|date:"d M Y" }}
+        </div>
+      </div>
+      <div class="gap-info">
+        <div class="gap-info-d">Прогнозируемый дефицит</div>
+        <div class="gap-info-v">−{{ cash_gap_alerts.0.deficit_amount|floatformat:0|intcomma }} ₽</div>
+        <div class="gap-info-sub">
+          {% if cash_gap_alerts|length > 1 %}
+            Всего разрывов в прогнозе: <b>{{ cash_gap_alerts|length }}</b>
+          {% else %}
+            На горизонте 30 дней — 1 кассовый разрыв.
+          {% endif %}
+        </div>
+        <div style="margin-top:14px">
+          <a href="{% url 'payments:alerts' %}" class="btn btn-sm" style="background:rgba(255,255,255,.5);border:1px solid #fca5a5;color:#7f1d1d">
+            <i class="bi bi-arrow-right"></i> Подробнее
+          </a>
+        </div>
+      </div>
+    </div>
+    {% else %}
+    <div class="card">
+      <div class="card-h"><div class="card-h-l"><i class="bi bi-shield-check ico" style="color:var(--ok)"></i>Кассовых разрывов нет</div></div>
+      <div style="padding:20px 16px;text-align:center;color:var(--text-3);font-size:12px">
+        <i class="bi bi-check-circle" style="font-size:24px;color:var(--ok);display:block;margin-bottom:8px"></i>
+        Прогноз на 30 дней без дефицитов
+      </div>
+    </div>
+    {% endif %}
+
+    {# График прогноза ДС — на 2 колонки #}
+    <div class="card span-2">
+      <div class="card-h">
+        <div class="card-h-l">
+          <i class="bi bi-graph-up ico"></i>
+          <span>Прогноз остатка ДС · 30 дней</span>
+          <span class="freshness-dot"></span>
+        </div>
+        <div class="card-h-r">
+          {% if forecast_data %}<span class="meta">сегодня {{ forecast_data.0.closing_balance|floatformat:0|intcomma }} ₽</span>{% endif %}
+        </div>
+      </div>
+      {% include "payments/partials/_forecast_chart.html" %}
+    </div>
+
+    {# Платёжная дисциплина #}
+    <div class="card">
+      <div class="card-h">
+        <div class="card-h-l"><i class="bi bi-check2-circle ico"></i>Платёжная дисциплина</div>
+      </div>
+      <div class="kpi" style="border-bottom:1px solid var(--border)">
+        <div class="kpi-l" style="text-transform:none;letter-spacing:0;font-size:11px">Оплачено в срок</div>
+        <div class="kpi-v" style="font-size:22px;color:var(--ok)">{{ discipline.rate }}<span class="u">%</span></div>
+        <div class="kpi-prog"><span style="width:{{ discipline.rate }}%;background:var(--ok)"></span></div>
+        <div class="kpi-foot">из {{ discipline.total }} запланированных</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-l" style="text-transform:none;letter-spacing:0;font-size:11px">Просрочено</div>
+        <div class="kpi-v" style="font-size:22px;color:var(--bad)">{{ discipline.overdue }}</div>
+      </div>
+    </div>
+
+  </div>
+  {% endif %}
+
+  {# ==================== РЕЖИМ: НЕДЕЛЯ ==================== #}
+  {% if view_mode == 'week' %}
+  <div class="bento" style="padding:0">
+    <div class="card span-3">
+      <div class="card-h">
+        <div class="card-h-l">
+          <i class="bi bi-calendar-range ico"></i>
+          <span>Неделя</span>
+          <span class="freshness-dot"></span>
+        </div>
+      </div>
+      {% include "payments/partials/_calendar_week.html" %}
+    </div>
+  </div>
+  {% endif %}
+
+  {# ==================== РЕЖИМ: ДЕНЬ ==================== #}
+  {% if view_mode == 'day' %}
+  <div class="bento" style="padding:0">
+    <div class="card span-2">
+      <div class="card-h">
+        <div class="card-h-l">
+          <i class="bi bi-calendar-day ico"></i>
+          <span>{{ today|date:"l, d F Y" }}</span>
+          <span class="freshness-dot"></span>
+        </div>
+      </div>
+      {% include "payments/partials/_calendar_day.html" %}
+    </div>
+    <div class="card">
+      <div class="card-h"><div class="card-h-l"><i class="bi bi-cash-coin ico"></i>Денежная позиция</div></div>
+      {% with day_balance=calendar_data.0.balance %}
+        {% if day_balance %}
+        <div class="kpi" style="border-bottom:1px solid var(--border)">
+          <div class="kpi-l" style="text-transform:none;letter-spacing:0;font-size:11px">Остаток на начало</div>
+          <div class="kpi-v" style="font-size:22px">{{ day_balance.opening_balance|floatformat:0|intcomma }}<span class="u">₽</span></div>
+        </div>
+        <div class="kpi" style="border-bottom:1px solid var(--border)">
+          <div class="kpi-l" style="text-transform:none;letter-spacing:0;font-size:11px">Плановые оплаты</div>
+          <div class="kpi-v" style="font-size:22px;color:var(--bad)">−{{ day_balance.total_outflow|floatformat:0|intcomma }}<span class="u">₽</span></div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-l" style="text-transform:none;letter-spacing:0;font-size:11px">Остаток на конец</div>
+          <div class="kpi-v" style="font-size:22px;color:{% if day_balance.is_cash_gap %}var(--bad){% else %}var(--ok){% endif %}">
+            {% if day_balance.is_cash_gap %}−{% endif %}{{ day_balance.closing_balance|floatformat:0|intcomma }}<span class="u">₽</span>
+          </div>
+          {% if day_balance.is_cash_gap %}<div class="kpi-foot" style="color:var(--bad)">Дефицит, требуется решение</div>{% endif %}
+        </div>
         {% else %}
-        <p class="text-muted mb-0">Нет данных для прогноза.</p>
+        <div style="padding:20px;text-align:center;color:var(--text-3);font-size:12px">
+          Нет данных по балансу на этот день
+        </div>
         {% endif %}
+      {% endwith %}
     </div>
+  </div>
+  {% endif %}
+
+  {# ==================== РЕЖИМ: СПИСОК ==================== #}
+  {% if view_mode == 'list' %}
+  <div class="bento" style="padding:0">
+    <div class="card span-3">
+      <div class="card-h">
+        <div class="card-h-l">
+          <i class="bi bi-list-task ico"></i>
+          <span>Все платежи · {{ month_name }} {{ year }}</span>
+          <span class="freshness-dot"></span>
+        </div>
+        <div class="card-h-r">
+          <span class="meta">{{ month_summary.count }} шт · {{ month_summary.total|floatformat:0|intcomma }} ₽</span>
+        </div>
+      </div>
+      {% include "payments/partials/_calendar_list.html" %}
+    </div>
+  </div>
+  {% endif %}
+
+  {# ==================== РЕЖИМ: ПРОГНОЗ ==================== #}
+  {% if view_mode == 'forecast' %}
+  <div class="bento" style="padding:0">
+    <div class="card span-3">
+      <div class="card-h">
+        <div class="card-h-l">
+          <i class="bi bi-graph-up ico"></i>
+          <span>Прогноз остатка ДС · 30 дней</span>
+          <span class="freshness-dot"></span>
+        </div>
+        <div class="card-h-r">
+          {% if forecast_data %}<span class="meta">сегодня {{ forecast_data.0.closing_balance|floatformat:0|intcomma }} ₽</span>{% endif %}
+        </div>
+      </div>
+      <div class="chart-wrap" style="height:340px;padding:14px;position:relative">
+        <canvas id="forecastChartBig"></canvas>
+      </div>
+    </div>
+
+    {% if forecast_extremes %}
+    <div class="card">
+      <div class="card-h"><div class="card-h-l"><i class="bi bi-arrow-down-circle ico"></i>Минимум прогноза</div></div>
+      <div class="kpi">
+        <div class="kpi-l" style="text-transform:none;letter-spacing:0;font-size:11px">{{ forecast_extremes.min.date|date:"d F Y" }}</div>
+        <div class="kpi-v" style="font-size:22px;color:{% if forecast_extremes.min.closing_balance < 0 %}var(--bad){% else %}var(--ok){% endif %}">
+          {% if forecast_extremes.min.closing_balance < 0 %}−{% endif %}{{ forecast_extremes.min.closing_balance|floatformat:0|intcomma }}<span class="u">₽</span>
+        </div>
+        {% if forecast_extremes.min.closing_balance < 0 %}<div class="kpi-foot" style="color:var(--bad)">кассовый разрыв</div>{% endif %}
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-h"><div class="card-h-l"><i class="bi bi-arrow-up-circle ico"></i>Максимум прогноза</div></div>
+      <div class="kpi">
+        <div class="kpi-l" style="text-transform:none;letter-spacing:0;font-size:11px">{{ forecast_extremes.max.date|date:"d F Y" }}</div>
+        <div class="kpi-v" style="font-size:22px;color:var(--ok)">{{ forecast_extremes.max.closing_balance|floatformat:0|intcomma }}<span class="u">₽</span></div>
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="card">
+      <div class="card-h"><div class="card-h-l"><i class="bi bi-pie-chart ico"></i>Сводка месяца</div></div>
+      <div class="kpi" style="border-bottom:1px solid var(--border)">
+        <div class="kpi-l" style="text-transform:none;letter-spacing:0;font-size:11px">Запланировано</div>
+        <div class="kpi-v" style="font-size:18px">{{ month_summary.total|floatformat:0|intcomma }}<span class="u">₽</span></div>
+        <div class="kpi-foot">{{ month_summary.count }} платеж{{ month_summary.count|pluralize:"и,ей" }}</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-l" style="text-transform:none;letter-spacing:0;font-size:11px">Оплачено</div>
+        <div class="kpi-v" style="font-size:18px;color:var(--ok)">{{ month_summary.paid|floatformat:0|intcomma }}<span class="u">₽</span></div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
 </div>
 
-{% if cash_gap_alerts %}
-<div class="card mt-3 border-danger">
-    <div class="card-header bg-danger text-white"><strong>⚠ Предупреждения о кассовых разрывах</strong></div>
-    <div class="card-body p-0">
-        <table class="table table-sm mb-0">
-            <thead><tr><th>Дата</th><th class="text-end">Дефицит</th></tr></thead>
-            <tbody>
-            {% for alert in cash_gap_alerts %}
-            <tr class="table-danger"><td>{{ alert.date|date:"d.m.Y" }}</td><td class="text-end fw-bold">{{ alert.deficit_amount|floatformat:0|intcomma }} ₽</td></tr>
-            {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</div>
-{% endif %}
+{# Контейнер для HTMX-попапа дня — заполняется при клике на ячейку календаря #}
+<div id="dayPopup"></div>
+
 {% endblock %}
 
 {% block extra_js %}
-{% if forecast_data %}
 <script>
+// Закрытие попапа дня (вызывается из _day_popup.html)
+function closeDayPopup() {
+  document.getElementById('dayPopup').innerHTML = '';
+}
+
 document.addEventListener('DOMContentLoaded', function() {
-    new Chart(document.getElementById('forecastChart'), {
-        type: 'bar',
-        data: {
-            labels: [{% for d in forecast_data %}"{{ d.date|date:'d.m' }}"{% if not forloop.last %},{% endif %}{% endfor %}],
-            datasets: [{
-                label: 'Остаток ДС',
-                data: [{% for d in forecast_data %}{{ d.closing_balance }}{% if not forloop.last %},{% endif %}{% endfor %}],
-                backgroundColor: [{% for d in forecast_data %}{% if d.is_cash_gap %}'rgba(220,53,69,0.6)'{% else %}'rgba(68,114,196,0.6)'{% endif %}{% if not forloop.last %},{% endif %}{% endfor %}]
-            }]
+  if (typeof Chart === 'undefined') return;
+
+  // ─ Прогноз ДС в режиме forecast (большой график)
+  const big = document.getElementById('forecastChartBig');
+  if (big) {
+    const labels = [{% for d in forecast_data %}"{{ d.date|date:'d.m' }}"{% if not forloop.last %},{% endif %}{% endfor %}];
+    const data = [{% for d in forecast_data %}{{ d.closing_balance }}{% if not forloop.last %},{% endif %}{% endfor %}];
+    const colors = [{% for d in forecast_data %}{% if d.is_cash_gap %}'#dc2626'{% else %}'#16a34a'{% endif %}{% if not forloop.last %},{% endif %}{% endfor %}];
+
+    new Chart(big, {
+      type: 'bar',
+      data: { labels: labels, datasets: [{ data: data, backgroundColor: colors, borderRadius: 3 }] },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#18181b', titleColor: '#fff', bodyColor: '#d4d4d8', padding: 8, cornerRadius: 5,
+            callbacks: { label: c => new Intl.NumberFormat('ru-RU').format(c.raw) + ' ₽' }
+          }
         },
-        options: {
-            responsive: true,
-            plugins: { legend: { display: false } },
-            scales: { y: { beginAtZero: false } }
+        scales: {
+          x: { grid: { display: false }, border: { display: false }, ticks: { color: '#a1a1aa', font: { size: 10 } } },
+          y: { grid: { color: '#f1f1f1' }, border: { display: false }, ticks: { color: '#a1a1aa', font: { size: 10 }, callback: v => (v/1000).toFixed(0) + ' тыс.' } }
         }
+      }
     });
+  }
 });
 </script>
-{% endif %}
 {% endblock %}

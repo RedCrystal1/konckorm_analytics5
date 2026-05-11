@@ -1,0 +1,199 @@
+{% load static %}
+{% if user.is_authenticated %}
+{# КонцКорма.Аналитика — DOCK NAVIGATION #}
+
+<div class="dock" id="kkDock">
+  {# 1. ДАШБОРД #}
+  <a class="dock-item di-1" data-group="dash" href="{% url 'dashboard:index' %}">
+    <i class="bi bi-house-door-fill"></i>
+    <span class="dock-tooltip">Дашборд</span>
+  </a>
+  <span class="dock-sep"></span>
+
+  {# 2. ДАННЫЕ #}
+  <a class="dock-item di-2" data-group="data" href="{% url 'counterparties:list' %}">
+    <i class="bi bi-database"></i>
+    <span class="dock-tooltip">Данные</span>
+  </a>
+
+  {# 3. АНАЛИЗ #}
+  {% if not user.is_procurement %}
+  <a class="dock-item di-3" data-group="anal" href="{% url 'registers:debt_register' %}">
+    <i class="bi bi-graph-up"></i>
+    <span class="dock-tooltip">Анализ</span>
+  </a>
+  {% else %}
+  <a class="dock-item di-3" data-group="anal" href="{% url 'registers:debt_register' %}">
+    <i class="bi bi-graph-up"></i>
+    <span class="dock-tooltip">Анализ</span>
+  </a>
+  {% endif %}
+  <span class="dock-sep"></span>
+
+  {# 4. ИНСТРУМЕНТЫ #}
+  {% if not user.is_procurement %}
+  <a class="dock-item di-4" data-group="tool" href="{% url 'reports:generator' %}">
+    <i class="bi bi-tools"></i>
+    <span class="dock-tooltip">Инструменты</span>
+  </a>
+  {% endif %}
+
+  {# 5. АДМИНИСТРИРОВАНИЕ #}
+  {% if user.is_admin %}
+  <a class="dock-item di-5" data-group="adm" href="{% url 'accounts:user_list' %}">
+    <i class="bi bi-shield-lock"></i>
+    <span class="dock-tooltip">Администрирование</span>
+  </a>
+  {% endif %}
+</div>
+
+{# Попап дока — наполняется JS в зависимости от группы #}
+<div class="dock-popover" id="kkDockPopover">
+  <div class="dock-popover-title" id="kkDockTitle">—</div>
+  <div id="kkDockItems"></div>
+</div>
+
+<script>
+(function() {
+  // ────────────────────────────────────────────────────────────
+  // Конфигурация групп — ссылки на разделы и счётчики
+  // Счётчики приходят из контекст-процессора через data-* атрибуты
+  // ────────────────────────────────────────────────────────────
+  const dockData = {
+    dash: {
+      title: 'Дашборд',
+      items: [
+        { ico: 'house-door-fill', name: 'Сводка', url: "{% url 'dashboard:index' %}" },
+      ]
+    },
+    data: {
+      title: 'Данные',
+      items: [
+        { ico: 'building',      name: 'Контрагенты',       url: "{% url 'counterparties:list' %}" },
+        { ico: 'file-earmark-text', name: 'Документы',     url: "{% url 'documents:receipt_list' %}" },
+        { ico: 'bank',          name: 'Остатки по счетам', url: "{% url 'documents:balance_list' %}" },
+        {% if not user.is_procurement %}
+        { ico: 'book',          name: 'Справочники',       url: "{% url 'directories:nomenclature_list' %}" },
+        {% endif %}
+      ]
+    },
+    anal: {
+      title: 'Анализ',
+      items: [
+        { ico: 'clipboard-data',     name: 'Реестр задолженности', url: "{% url 'registers:debt_register' %}" },
+        {% if not user.is_procurement %}
+        { ico: 'graph-up',           name: 'Аналитика и KPI',      url: "{% url 'analytics:dashboard' %}" },
+        { ico: 'cart3',              name: 'Структура закупок',    url: "{% url 'analytics:procurement' %}" },
+        { ico: 'calendar3',          name: 'Платёжный календарь',  url: "{% url 'payments:calendar' %}" },
+        { ico: 'exclamation-triangle', name: 'Кассовые разрывы',   url: "{% url 'payments:alerts' %}" },
+        { ico: 'arrow-left-right',   name: 'Сверки',               url: "{% url 'reconciliation:discrepancy_list' %}" },
+        {% endif %}
+      ]
+    },
+    tool: {
+      title: 'Инструменты',
+      items: [
+        {% if not user.is_procurement %}
+        { ico: 'printer',       name: 'Отчёты',       url: "{% url 'reports:generator' %}" },
+        {% endif %}
+        {% if user.is_admin or user.is_accountant %}
+        { ico: 'cloud-upload',  name: 'Импорт данных', url: "{% url 'data_import:upload' %}" },
+        {% endif %}
+      ]
+    },
+    adm: {
+      title: 'Администрирование',
+      items: [
+        {% if user.is_admin %}
+        { ico: 'people',        name: 'Пользователи',  url: "{% url 'accounts:user_list' %}" },
+        { ico: 'shield-lock',   name: 'Журнал аудита', url: "{% url 'accounts:audit_log' %}" },
+        { ico: 'gear',          name: 'Django Admin',  url: "{% url 'admin:index' %}" },
+        {% endif %}
+      ]
+    }
+  };
+
+  // Текущий путь — для подсветки активного элемента
+  const currentPath = window.location.pathname;
+
+  const dock = document.getElementById('kkDock');
+  const popover = document.getElementById('kkDockPopover');
+  const titleEl = document.getElementById('kkDockTitle');
+  const itemsEl = document.getElementById('kkDockItems');
+  let popoverTimeout;
+
+  function isCurrent(url) {
+    if (!url) return false;
+    if (url === '/' && currentPath === '/') return true;
+    if (url !== '/' && currentPath.indexOf(url) === 0) return true;
+    return false;
+  }
+
+  function showPopover(item) {
+    clearTimeout(popoverTimeout);
+    const group = dockData[item.dataset.group];
+    if (!group || !group.items.length) return;
+
+    titleEl.textContent = group.title + ' · ' + group.items.length + ' раздел' +
+      (group.items.length === 1 ? '' : (group.items.length < 5 ? 'а' : 'ов'));
+
+    itemsEl.innerHTML = '';
+    group.items.forEach(function(i) {
+      const a = document.createElement('a');
+      a.className = 'dock-popover-item' + (isCurrent(i.url) ? ' active' : '');
+      a.href = i.url;
+      a.innerHTML =
+        '<i class="bi bi-' + i.ico + '"></i>' +
+        '<span>' + i.name + '</span>' +
+        (i.cnt ? '<span class="cnt">' + i.cnt + '</span>' : '');
+      itemsEl.appendChild(a);
+    });
+
+    // Позиционирование под иконкой
+    const rect = item.getBoundingClientRect();
+    const left = Math.max(20, Math.min(
+      rect.left + rect.width / 2 - 130,
+      window.innerWidth - 260
+    ));
+    popover.style.left = left + 'px';
+    popover.classList.add('is-on');
+  }
+
+  function hidePopover() {
+    popoverTimeout = setTimeout(function() {
+      popover.classList.remove('is-on');
+    }, 200);
+  }
+
+  // Биндим hover/click на каждую иконку дока
+  document.querySelectorAll('.dock-item').forEach(function(item) {
+    item.addEventListener('mouseenter', function() {
+      showPopover(item);
+    });
+    item.addEventListener('mouseleave', hidePopover);
+
+    // Подсвечиваем активную иконку группы
+    const groupKey = item.dataset.group;
+    if (dockData[groupKey]) {
+      const hasCurrent = dockData[groupKey].items.some(function(i) {
+        return isCurrent(i.url);
+      });
+      if (hasCurrent) item.classList.add('is-active');
+    }
+  });
+
+  // Попап тоже не должен закрываться при наведении
+  popover.addEventListener('mouseenter', function() {
+    clearTimeout(popoverTimeout);
+  });
+  popover.addEventListener('mouseleave', hidePopover);
+
+  // Закрытие попапа при клике вне
+  document.addEventListener('click', function(e) {
+    if (!dock.contains(e.target) && !popover.contains(e.target)) {
+      popover.classList.remove('is-on');
+    }
+  });
+})();
+</script>
+{% endif %}

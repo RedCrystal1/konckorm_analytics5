@@ -1,15 +1,48 @@
 {% load humanize %}
-<table class="table table-hover table-sm">
-<thead class="table-light"><tr><th>Наименование</th><th>ИНН</th><th>Ключевой</th><th>Менеджер</th></tr></thead>
-<tbody>
-{% for cp in counterparties %}
-<tr style="cursor:pointer" onclick="window.location='{% url 'counterparties:detail' cp.pk %}'">
-    <td>{{ cp.name }}</td><td>{{ cp.inn }}</td>
-    <td>{% if cp.is_key_supplier %}<span class="badge bg-warning text-dark">★</span>{% endif %}</td>
-    <td>{{ cp.responsible_manager|default:"—" }}</td>
-</tr>
-{% empty %}
-<tr><td colspan="4" class="text-center text-muted py-3">Контрагенты не найдены</td></tr>
-{% endfor %}
-</tbody></table>
+<table class="tbl-clean">
+  <thead>
+    <tr>
+      <th>Контрагент</th>
+      <th>ИНН</th>
+      <th>Менеджер</th>
+      <th class="r">Тип</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for cp in counterparties %}
+    <tr onclick="window.location='{% url 'counterparties:detail' cp.pk %}'">
+      <td>
+        <div class="cp">
+          <div class="cp-mark"
+               style="background:{% if cp.is_key_supplier %}var(--purple){% else %}var(--info){% endif %}">
+            {{ cp.name|slice:":2"|upper }}
+          </div>
+          <div>
+            <div class="cp-name">
+              {% if cp.is_key_supplier %}<span class="star">★</span>{% endif %}{{ cp.name|truncatechars:40 }}
+            </div>
+            {% if cp.code_1c %}<div class="cp-inn">Код 1С: {{ cp.code_1c }}</div>{% endif %}
+          </div>
+        </div>
+      </td>
+      <td class="mono" style="font-size:11.5px;color:var(--text-2)">{{ cp.inn }}</td>
+      <td style="font-size:12px;color:var(--text-2)">
+        {% if cp.responsible_manager %}{{ cp.responsible_manager|stringformat:"s"|truncatechars:24 }}{% else %}<span style="color:var(--text-3)">—</span>{% endif %}
+      </td>
+      <td class="r">
+        {% if cp.is_key_supplier %}
+          <span class="chip chip-purple"><i class="bi bi-star-fill"></i>Ключевой</span>
+        {% else %}
+          <span class="chip" style="background:var(--surface-2);color:var(--text-2)">Прочий</span>
+        {% endif %}
+      </td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="4" style="text-align:center;padding:40px;color:var(--text-3)">
+      <i class="bi bi-building" style="font-size:24px;display:block;margin-bottom:8px"></i>
+      Контрагенты не найдены
+    </td></tr>
+  {% endfor %}
+  </tbody>
+</table>
 {% include "partials/_pagination.html" %}

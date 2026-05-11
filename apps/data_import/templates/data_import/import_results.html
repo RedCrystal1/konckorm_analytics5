@@ -1,102 +1,95 @@
 {% extends "base.html" %}
 {% load humanize %}
 {% block title %}Результаты импорта #{{ session.pk }}{% endblock %}
+{% block breadcrumbs %}
+  <a href="#">Инструменты</a> <i class="bi bi-chevron-right sep" style="font-size:11px"></i>
+  <a href="{% url 'data_import:history' %}">Импорт</a> <i class="bi bi-chevron-right sep" style="font-size:11px"></i>
+  <b>#{{ session.pk }}</b>
+{% endblock %}
+
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="page-content" style="padding:0 24px 24px">
+
+  <div class="page-head" style="margin:0 -24px 14px;padding:14px 24px;border-radius:0">
     <div>
-        <h2 class="mb-0">Импорт #{{ session.pk }}</h2>
-        <small class="text-muted">{{ session.created_at|date:"d.m.Y H:i" }} — {{ session.get_status_display }}</small>
+      <h1 class="ph-title" style="margin:0">Импорт #{{ session.pk }}</h1>
+      <div class="ph-sub">
+        <span class="live-dot"></span>
+        {{ session.created_at|date:"d.m.Y H:i" }} ·
+        {% if session.status == 'completed' %}<span style="color:var(--ok)">Завершён</span>
+        {% elif session.status == 'processing' %}<span style="color:var(--accent)">В процессе</span>
+        {% elif session.status == 'failed' %}<span style="color:var(--bad)">Ошибка</span>
+        {% else %}{{ session.get_status_display }}{% endif %}
+      </div>
     </div>
-    <a href="{% url 'data_import:history' %}" class="btn btn-outline-secondary btn-sm">
-        <i class="bi bi-arrow-left me-1"></i>К истории
-    </a>
-</div>
+    <div class="page-head-r">
+      <a href="{% url 'data_import:history' %}" class="btn btn-outline-primary btn-sm">
+        <i class="bi bi-chevron-left"></i> К истории
+      </a>
+    </div>
+  </div>
 
-<!-- Статистика -->
-<div class="row g-3 mb-4">
-    <div class="col-sm-6 col-xl">
-        <div class="card text-center">
-            <div class="card-body py-3">
-                <i class="bi bi-database text-muted fs-4 d-block mb-1"></i>
-                <div class="text-muted small">Всего записей</div>
-                <h4 class="mb-0">{{ session.total_records }}</h4>
-            </div>
-        </div>
+  {# 5 KPI #}
+  <div class="kpi-grid" style="grid-template-columns:repeat(5,1fr);margin-bottom:14px">
+    <div class="kpi-card">
+      <div class="kpi-head"><span class="kpi-label">Всего</span><span class="kpi-ico"><i class="bi bi-database"></i></span></div>
+      <div class="kpi-value">{{ session.total_records }}</div>
     </div>
-    <div class="col-sm-6 col-xl">
-        <div class="card text-center border-start border-4 border-success">
-            <div class="card-body py-3">
-                <i class="bi bi-plus-circle text-success fs-4 d-block mb-1"></i>
-                <div class="text-muted small">Создано</div>
-                <h4 class="mb-0 text-success">{{ session.created_records }}</h4>
-            </div>
-        </div>
+    <div class="kpi-card">
+      <div class="kpi-head"><span class="kpi-label">Создано</span><span class="kpi-ico" style="color:var(--ok)"><i class="bi bi-plus-circle"></i></span></div>
+      <div class="kpi-value text-success">{{ session.created_records }}</div>
     </div>
-    <div class="col-sm-6 col-xl">
-        <div class="card text-center">
-            <div class="card-body py-3">
-                <i class="bi bi-arrow-repeat text-primary fs-4 d-block mb-1"></i>
-                <div class="text-muted small">Обновлено</div>
-                <h4 class="mb-0">{{ session.updated_records }}</h4>
-            </div>
-        </div>
+    <div class="kpi-card">
+      <div class="kpi-head"><span class="kpi-label">Обновлено</span><span class="kpi-ico"><i class="bi bi-arrow-repeat"></i></span></div>
+      <div class="kpi-value">{{ session.updated_records }}</div>
     </div>
-    <div class="col-sm-6 col-xl">
-        <div class="card text-center {% if session.error_records > 0 %}border-start border-4 border-danger{% endif %}">
-            <div class="card-body py-3">
-                <i class="bi bi-x-circle text-danger fs-4 d-block mb-1"></i>
-                <div class="text-muted small">Ошибок</div>
-                <h4 class="mb-0 {% if session.error_records > 0 %}text-danger{% endif %}">{{ session.error_records }}</h4>
-            </div>
-        </div>
+    <div class="kpi-card">
+      <div class="kpi-head"><span class="kpi-label">Ошибок</span><span class="kpi-ico" style="color:var(--bad)"><i class="bi bi-x-circle"></i></span></div>
+      <div class="kpi-value {% if session.error_records > 0 %}text-danger{% endif %}">{{ session.error_records }}</div>
     </div>
-    <div class="col-sm-6 col-xl">
-        <div class="card text-center {% if session.duplicates_found > 0 %}border-start border-4 border-warning{% endif %}">
-            <div class="card-body py-3">
-                <i class="bi bi-copy text-warning fs-4 d-block mb-1"></i>
-                <div class="text-muted small">Дублей</div>
-                <h4 class="mb-0 {% if session.duplicates_found > 0 %}text-warning{% endif %}">{{ session.duplicates_found }}</h4>
-            </div>
-        </div>
+    <div class="kpi-card">
+      <div class="kpi-head"><span class="kpi-label">Дублей</span><span class="kpi-ico" style="color:var(--warn)"><i class="bi bi-copy"></i></span></div>
+      <div class="kpi-value {% if session.duplicates_found > 0 %}text-warning{% endif %}">{{ session.duplicates_found }}</div>
     </div>
-</div>
+  </div>
 
-<!-- Действия -->
-<div class="d-flex gap-2 mb-4">
+  {# Действия #}
+  <div style="display:flex;gap:8px;margin-bottom:14px">
     {% if session.duplicates_found > 0 %}
-    <a href="{% url 'data_import:duplicates' session.pk %}" class="btn btn-warning">
-        <i class="bi bi-copy me-1"></i>Ревью дублей ({{ session.duplicates_found }})
+    <a href="{% url 'data_import:duplicates' session.pk %}" class="btn btn-warning btn-sm" style="background:var(--warn);color:#fff;border-color:var(--warn)">
+      <i class="bi bi-copy"></i> Ревью дублей ({{ session.duplicates_found }})
     </a>
     {% endif %}
-    <a href="{% url 'data_import:corrections' session.pk %}" class="btn btn-outline-primary">
-        <i class="bi bi-pencil-square me-1"></i>Ручная корректировка
+    <a href="{% url 'data_import:corrections' session.pk %}" class="btn btn-outline-primary btn-sm">
+      <i class="bi bi-pencil-square"></i> Ручная корректировка
     </a>
-</div>
+  </div>
 
-<!-- Лог -->
-<div class="card">
-    <div class="card-header"><i class="bi bi-journal-text me-2"></i><strong>Лог импорта</strong></div>
-    <div class="card-body p-0">
-        <table class="table table-sm mb-0">
-            <thead>
-                <tr><th style="width:60px">Строка</th><th style="width:80px">Уровень</th><th>Сообщение</th></tr>
-            </thead>
-            <tbody>
-            {% for log in logs %}
-            <tr>
-                <td><code>{{ log.row_number|default:"—" }}</code></td>
-                <td>
-                    {% if log.level == 'error' %}<span class="badge bg-danger">Ошибка</span>
-                    {% elif log.level == 'warning' %}<span class="badge bg-warning text-dark">Внимание</span>
-                    {% else %}<span class="badge bg-info text-dark">Инфо</span>{% endif %}
-                </td>
-                <td><small>{{ log.message }}</small></td>
-            </tr>
-            {% empty %}
-            <tr><td colspan="3" class="text-center text-muted py-3">Лог пуст</td></tr>
-            {% endfor %}
-            </tbody>
-        </table>
+  {# Лог #}
+  <div class="card">
+    <div class="card-h">
+      <div class="card-h-l"><i class="bi bi-journal-text ico"></i>Лог импорта</div>
+      <div class="card-h-r"><span class="meta">{{ logs|length }} запис{{ logs|length|pluralize:"ь,и,ей" }}</span></div>
     </div>
+    <table class="tbl-clean">
+      <thead><tr><th style="width:80px">Строка</th><th style="width:100px">Уровень</th><th>Сообщение</th></tr></thead>
+      <tbody>
+      {% for log in logs %}
+        <tr>
+          <td class="mono" style="font-size:11px;color:var(--text-3)">{{ log.row_number|default:"—" }}</td>
+          <td>
+            {% if log.level == 'error' %}<span class="chip chip-bad"><i class="bi bi-x-circle"></i>Ошибка</span>
+            {% elif log.level == 'warning' %}<span class="chip chip-warn"><i class="bi bi-exclamation-triangle"></i>Внимание</span>
+            {% else %}<span class="chip chip-info"><i class="bi bi-info-circle"></i>Инфо</span>{% endif %}
+          </td>
+          <td style="font-size:12px">{{ log.message }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="3" style="text-align:center;padding:30px;color:var(--text-3)">Лог пуст</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
 </div>
 {% endblock %}

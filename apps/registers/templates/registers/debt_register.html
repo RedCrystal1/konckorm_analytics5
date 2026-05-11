@@ -1,103 +1,202 @@
 {% extends "base.html" %}
 {% load humanize %}
+
 {% block title %}Реестр задолженности{% endblock %}
+{% block breadcrumbs %}
+  <a href="#">Анализ</a> <i class="bi bi-chevron-right sep" style="font-size:11px"></i>
+  <b>Реестр задолженности</b>
+{% endblock %}
+
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h2>Реестр задолженности по срокам</h2>
-    <div class="d-flex gap-2">
-        <a href="{% url 'reports:generator' %}" class="btn btn-outline-primary btn-sm">Экспорт →</a>
+<div class="page-content" style="padding:0 24px 24px">
+
+  {# Заголовок страницы #}
+  <div class="page-head" style="margin:0 -24px 14px;padding:14px 24px;border-radius:0">
+    <div>
+      <h1 class="ph-title" style="margin:0">Реестр задолженности</h1>
+      <div class="ph-sub">
+        <span class="live-dot"></span>
+        {{ summary.record_count }} запис{{ summary.record_count|pluralize:"ь,и,ей" }}
+        {% if summary.total_debt %}· сумма {{ summary.total_debt|floatformat:0|intcomma }} ₽{% endif %}
+        {% if request.GET.search %}· поиск: «<b style="color:var(--text)">{{ request.GET.search }}</b>»{% endif %}
+      </div>
     </div>
-</div>
-
-<!-- Сводка -->
-{% if summary.total_debt %}
-<div class="row g-3 mb-3">
-    <div class="col-sm-6 col-xl-3"><div class="card"><div class="card-body text-center py-2">
-        <div class="text-muted small">Общая задолженность</div>
-        <h5 class="mb-0">{{ summary.total_debt|floatformat:0|intcomma }} ₽</h5>
-    </div></div></div>
-    <div class="col-sm-6 col-xl-3"><div class="card border-danger"><div class="card-body text-center py-2">
-        <div class="text-muted small">Просроченная</div>
-        <h5 class="mb-0 text-danger">{{ summary.total_overdue|floatformat:0|intcomma }} ₽</h5>
-    </div></div></div>
-    <div class="col-sm-6 col-xl-3"><div class="card"><div class="card-body text-center py-2">
-        <div class="text-muted small">Текущая</div>
-        <h5 class="mb-0 text-success">{{ summary.total_current|floatformat:0|intcomma }} ₽</h5>
-    </div></div></div>
-    <div class="col-sm-6 col-xl-3"><div class="card"><div class="card-body text-center py-2">
-        <div class="text-muted small">Записей</div>
-        <h5 class="mb-0">{{ summary.record_count }}</h5>
-    </div></div></div>
-</div>
-{% endif %}
-
-<!-- Фильтры и группировка -->
-<div class="card mb-3">
-    <div class="card-body py-2">
-        <form method="get" class="row g-2 align-items-end">
-            <div class="col-md-3">
-                <label class="form-label small">Поиск</label>
-                <input type="text" name="search" value="{{ request.GET.search }}" class="form-control form-control-sm" placeholder="Контрагент или документ...">
-            </div>
-            <div class="col-md-2">
-                <label class="form-label small">Статус</label>
-                <select name="status" class="form-select form-select-sm">
-                    <option value="">Все</option>
-                    <option value="current" {% if request.GET.status == 'current' %}selected{% endif %}>Текущая</option>
-                    <option value="overdue_30" {% if request.GET.status == 'overdue_30' %}selected{% endif %}>Просрочка до 30 дн.</option>
-                    <option value="overdue_60" {% if request.GET.status == 'overdue_60' %}selected{% endif %}>30–60 дней</option>
-                    <option value="overdue_90" {% if request.GET.status == 'overdue_90' %}selected{% endif %}>60–90 дней</option>
-                    <option value="overdue_90_plus" {% if request.GET.status == 'overdue_90_plus' %}selected{% endif %}>Свыше 90 дн.</option>
-                </select>
-            </div>
-            <div class="col-md-2">
-                <label class="form-label small">Группировка</label>
-                <select name="group_by" class="form-select form-select-sm">
-                    <option value="">Без группировки</option>
-                    <option value="manager" {% if request.GET.group_by == 'manager' %}selected{% endif %}>По менеджерам</option>
-                    <option value="interval" {% if request.GET.group_by == 'interval' %}selected{% endif %}>По интервалам просрочки</option>
-                    <option value="key_supplier" {% if request.GET.group_by == 'key_supplier' %}selected{% endif %}>Ключевые поставщики</option>
-                </select>
-            </div>
-            <div class="col-md-2">
-                <label class="form-label small">Только ключевые</label>
-                <select name="key_only" class="form-select form-select-sm">
-                    <option value="">Все</option>
-                    <option value="1" {% if request.GET.key_only == '1' %}selected{% endif %}>Только ключевые</option>
-                </select>
-            </div>
-            <div class="col-md-1">
-                <button type="submit" class="btn btn-primary btn-sm w-100">🔍</button>
-            </div>
-        </form>
+    <div class="page-head-r">
+      <a href="{% url 'reports:generator' %}" class="btn btn-outline-primary btn-sm">
+        <i class="bi bi-file-earmark-spreadsheet"></i> Excel
+      </a>
     </div>
-</div>
+  </div>
 
-<!-- Легенда цветов -->
-<div class="mb-2 small">
-    <span class="badge bg-success">Оплачен</span>
-    <span class="badge bg-info text-dark">Текущая</span>
-    <span class="badge" style="background:#fff3cd;color:#664d03;border:1px solid #ffc107">Скоро срок (≤3 дн.)</span>
-    <span class="badge bg-warning text-dark">Просрочка ≤60 дн.</span>
-    <span class="badge bg-danger">Просрочка &gt;60 дн.</span>
-</div>
+  {# 3 KPI сверху #}
+  <div class="bento" style="padding:0;grid-template-columns:repeat(3,1fr);margin-bottom:14px">
+    <div class="card">
+      <div class="kpi">
+        <div class="kpi-l" style="display:flex;justify-content:space-between;align-items:center">
+          <span>Общая задолженность</span>
+          <i class="bi bi-wallet2" style="color:var(--text-3)"></i>
+        </div>
+        <div class="kpi-v" style="font-size:22px">{{ summary.total_debt|default:0|floatformat:0|intcomma }}<span class="u">₽</span></div>
+        <div class="kpi-foot">{{ summary.record_count }} документ{{ summary.record_count|pluralize:"а,ов" }}</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="kpi">
+        <div class="kpi-l" style="display:flex;justify-content:space-between;align-items:center">
+          <span>Просроченная</span>
+          <i class="bi bi-exclamation-octagon" style="color:var(--text-3)"></i>
+        </div>
+        <div class="kpi-v" style="font-size:22px;color:var(--bad)">{{ summary.total_overdue|default:0|floatformat:0|intcomma }}<span class="u">₽</span></div>
+        {% if summary.total_debt %}
+          {% widthratio summary.total_overdue summary.total_debt 100 as overdue_pct %}
+          <div class="kpi-prog"><span style="width:{{ overdue_pct }}%;background:var(--bad)"></span></div>
+          <div class="kpi-foot">{{ overdue_pct }}% от общей</div>
+        {% endif %}
+      </div>
+    </div>
+    <div class="card">
+      <div class="kpi">
+        <div class="kpi-l" style="display:flex;justify-content:space-between;align-items:center">
+          <span>Текущая</span>
+          <i class="bi bi-check-circle" style="color:var(--text-3)"></i>
+        </div>
+        <div class="kpi-v" style="font-size:22px;color:var(--ok)">{{ summary.total_current|default:0|floatformat:0|intcomma }}<span class="u">₽</span></div>
+        <div class="kpi-foot">в норме, без просрочек</div>
+      </div>
+    </div>
+  </div>
 
-<!-- Таблица с группировкой -->
-{% if grouped_data %}
+  {# Фильтр-чипы и поиск #}
+  <div class="card" style="margin-bottom:14px">
+    {# Поиск + группировка + ключевые #}
+    <div style="padding:10px 14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--border)">
+      <form method="get" style="display:flex;gap:8px;align-items:center;flex:1;min-width:240px">
+        {# Сохраняем текущие фильтры через скрытые поля #}
+        {% if request.GET.status %}<input type="hidden" name="status" value="{{ request.GET.status }}">{% endif %}
+        {% if request.GET.group_by %}<input type="hidden" name="group_by" value="{{ request.GET.group_by }}">{% endif %}
+        {% if request.GET.key_only %}<input type="hidden" name="key_only" value="{{ request.GET.key_only }}">{% endif %}
+        <div style="position:relative;flex:1;max-width:320px">
+          <i class="bi bi-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text-3);font-size:12px;line-height:1"></i>
+          <input type="text" name="search" value="{{ request.GET.search }}" class="form-control form-control-sm"
+                 placeholder="Контрагент или номер документа..."
+                 style="padding-left:30px">
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm">Найти</button>
+        {% if request.GET.search %}
+          <a href="?{% if request.GET.status %}status={{ request.GET.status }}&{% endif %}{% if request.GET.group_by %}group_by={{ request.GET.group_by }}{% endif %}" class="btn btn-outline-primary btn-sm" title="Сбросить поиск">
+            <i class="bi bi-x"></i>
+          </a>
+        {% endif %}
+      </form>
+
+      <div style="margin-left:auto;display:flex;gap:8px;align-items:center;font-size:11.5px;color:var(--text-2)">
+        <span>Группировка:</span>
+        <select onchange="changeFilter('group_by', this.value)" class="form-select form-select-sm" style="width:auto">
+          <option value="">Без группировки</option>
+          <option value="interval" {% if request.GET.group_by == 'interval' %}selected{% endif %}>По срокам</option>
+          <option value="manager" {% if request.GET.group_by == 'manager' %}selected{% endif %}>По менеджерам</option>
+          <option value="key_supplier" {% if request.GET.group_by == 'key_supplier' %}selected{% endif %}>По ключевым</option>
+        </select>
+      </div>
+    </div>
+
+    {# Чипы статусов #}
+    <div class="filter-bar">
+      <a href="?{% if request.GET.search %}search={{ request.GET.search }}&{% endif %}{% if request.GET.group_by %}group_by={{ request.GET.group_by }}&{% endif %}{% if request.GET.key_only %}key_only={{ request.GET.key_only }}{% endif %}"
+         class="filter-chip {% if not request.GET.status %}is-active{% endif %}">
+        <i class="bi bi-circle-fill" style="font-size:7px"></i>Все<b>{{ summary.record_count }}</b>
+      </a>
+      <a href="?status=overdue_90_plus{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.group_by %}&group_by={{ request.GET.group_by }}{% endif %}"
+         class="filter-chip {% if request.GET.status == 'overdue_90_plus' %}is-active{% endif %}">
+        <i class="bi bi-exclamation-triangle"></i>Критич &gt;90<b>{{ counts.overdue_90_plus|default:'' }}</b>
+      </a>
+      <a href="?status=overdue_90{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.group_by %}&group_by={{ request.GET.group_by }}{% endif %}"
+         class="filter-chip {% if request.GET.status == 'overdue_90' %}is-active{% endif %}">
+        <i class="bi bi-clock-history"></i>60–90 дн<b>{{ counts.overdue_90|default:'' }}</b>
+      </a>
+      <a href="?status=overdue_60{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.group_by %}&group_by={{ request.GET.group_by }}{% endif %}"
+         class="filter-chip {% if request.GET.status == 'overdue_60' %}is-active{% endif %}">
+        <i class="bi bi-clock"></i>30–60 дн<b>{{ counts.overdue_60|default:'' }}</b>
+      </a>
+      <a href="?status=overdue_30{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.group_by %}&group_by={{ request.GET.group_by }}{% endif %}"
+         class="filter-chip {% if request.GET.status == 'overdue_30' %}is-active{% endif %}">
+        <i class="bi bi-hourglass-split"></i>До 30 дн<b>{{ counts.overdue_30|default:'' }}</b>
+      </a>
+      <a href="?status=current{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.group_by %}&group_by={{ request.GET.group_by }}{% endif %}"
+         class="filter-chip {% if request.GET.status == 'current' %}is-active{% endif %}">
+        <i class="bi bi-check2"></i>Текущая<b>{{ counts.current|default:'' }}</b>
+      </a>
+
+      <span style="margin-left:auto"></span>
+
+      <a href="?{% if request.GET.search %}search={{ request.GET.search }}&{% endif %}{% if request.GET.status %}status={{ request.GET.status }}&{% endif %}{% if request.GET.group_by %}group_by={{ request.GET.group_by }}&{% endif %}{% if request.GET.key_only != '1' %}key_only=1{% endif %}"
+         class="filter-chip {% if request.GET.key_only == '1' %}is-active{% endif %}">
+        <i class="bi bi-star"></i>Только ключевые
+      </a>
+    </div>
+  </div>
+
+  {# Таблица с группировкой ИЛИ обычная #}
+  {% if grouped_data %}
     {% for group_name, group_records, group_total in grouped_data %}
-    <div class="card mb-3">
-        <div class="card-header d-flex justify-content-between">
-            <strong>{{ group_name }}</strong>
-            <span>{{ group_total|floatformat:0|intcomma }} ₽ ({{ group_records|length }} зап.)</span>
-        </div>
-        <div class="card-body p-0">
-            {% with records=group_records %}
-            {% include "registers/partials/_debt_table_rows.html" %}
-            {% endwith %}
-        </div>
+    <div class="card" style="margin-bottom:14px">
+      <div class="group-h" style="padding:10px 14px;font-size:11.5px">
+        <span>
+          {% if 'до 30' in group_name %}<i class="bi bi-hourglass-split" style="color:var(--info);width:11px;margin-right:4px"></i>
+          {% elif '30–60' in group_name or '60–90' in group_name %}<i class="bi bi-clock" style="color:var(--warn);width:11px;margin-right:4px"></i>
+          {% elif 'свыше 90' in group_name %}<i class="bi bi-exclamation-triangle" style="color:var(--bad);width:11px;margin-right:4px"></i>
+          {% elif 'Ключевые' in group_name %}<i class="bi bi-star" style="color:var(--purple);width:11px;margin-right:4px"></i>
+          {% elif 'Текущая' in group_name %}<i class="bi bi-check2" style="color:var(--ok);width:11px;margin-right:4px"></i>
+          {% else %}<i class="bi bi-people" style="color:var(--text-2);width:11px;margin-right:4px"></i>
+          {% endif %}
+          {{ group_name }}
+          <span style="color:var(--text-3);font-weight:500;margin-left:6px">{{ group_records|length }} запис{{ group_records|length|pluralize:"ь,и,ей" }}</span>
+        </span>
+        <span class="sum">{{ group_total|floatformat:0|intcomma }} ₽</span>
+      </div>
+      {% with records=group_records %}
+        {% include "registers/partials/_debt_table_rows.html" %}
+      {% endwith %}
     </div>
     {% endfor %}
-{% else %}
-    <div id="table-body">{% include "registers/partials/_debt_table.html" %}</div>
-{% endif %}
+  {% else %}
+    {# Без группировки — таблица + пагинация #}
+    <div class="card">
+      <div class="card-h">
+        <div class="card-h-l">
+          <i class="bi bi-list-task ico"></i>
+          <span>Список записей</span>
+          <span class="freshness-dot"></span>
+        </div>
+        <div class="card-h-r">
+          {% if page_obj %}
+            <span class="meta">{{ page_obj.start_index }}–{{ page_obj.end_index }} из {{ page_obj.paginator.count }}</span>
+          {% else %}
+            <span class="meta">{{ records|length }} запис{{ records|length|pluralize:"ь,и,ей" }}</span>
+          {% endif %}
+        </div>
+      </div>
+      <div id="table-body">
+        {% include "registers/partials/_debt_table.html" %}
+      </div>
+    </div>
+  {% endif %}
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Сабмит формы при смене группировки или ключевых
+function changeFilter(name, value) {
+  const url = new URL(window.location.href);
+  if (value) {
+    url.searchParams.set(name, value);
+  } else {
+    url.searchParams.delete(name);
+  }
+  url.searchParams.delete('page');  // сбрасываем пагинацию при смене фильтра
+  window.location = url.toString();
+}
+</script>
 {% endblock %}

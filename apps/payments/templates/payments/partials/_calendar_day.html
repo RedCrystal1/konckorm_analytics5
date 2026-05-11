@@ -1,0 +1,49 @@
+{% load humanize %}
+{% with day=calendar_data.0 %}
+  {% if day.is_cash_gap %}
+  <div style="background:var(--bad-soft);border-bottom:1px solid #fecaca;padding:10px 14px;display:flex;align-items:center;gap:8px">
+    <i class="bi bi-exclamation-triangle" style="color:var(--bad)"></i>
+    <span style="color:#7f1d1d;font-weight:500;font-size:12.5px">
+      Прогнозируемый кассовый разрыв:
+      <b>−{{ day.balance.closing_balance|floatformat:0|intcomma }} ₽</b>
+    </span>
+    <a href="{% url 'payments:alerts' %}" style="margin-left:auto;color:#7f1d1d;font-size:11.5px;text-decoration:underline">
+      Подробнее →
+    </a>
+  </div>
+  {% endif %}
+
+  {% if day.payments %}
+  <div class="day-list">
+    {% for p in day.payments %}
+    <div class="day-pay-row">
+      <div class="day-pay-mark"
+           style="background:{% if p.status == 'completed' %}var(--ok){% elif p.status == 'overdue' %}var(--bad){% else %}var(--info){% endif %}">
+        {% if p.status == 'completed' %}<i class="bi bi-check-lg"></i>
+        {% elif p.status == 'overdue' %}<i class="bi bi-exclamation-lg"></i>
+        {% else %}<i class="bi bi-clock"></i>{% endif %}
+      </div>
+      <div style="flex:1;min-width:0">
+        <div class="day-pay-name">
+          {% if p.counterparty.is_key_supplier %}<span style="color:var(--purple)">★</span> {% endif %}
+          {{ p.counterparty.name }}
+        </div>
+        <div class="day-pay-meta">
+          {% if p.source_document %}<span class="mono">{{ p.source_document.number }}</span>{% endif %}
+          {% if p.priority == 'high' %}· <span style="color:var(--bad)">высокий приоритет</span>{% endif %}
+        </div>
+      </div>
+      <div class="day-pay-amt mono"
+           style="{% if p.status == 'overdue' %}color:var(--bad){% endif %}">
+        {{ p.amount|floatformat:0|intcomma }} ₽
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div style="padding:50px;text-align:center;color:var(--text-3)">
+    <i class="bi bi-calendar-x" style="font-size:32px;display:block;margin-bottom:12px"></i>
+    <div style="font-size:13px">На этот день платежей не запланировано</div>
+  </div>
+  {% endif %}
+{% endwith %}

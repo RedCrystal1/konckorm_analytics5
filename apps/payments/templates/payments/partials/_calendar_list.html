@@ -1,0 +1,52 @@
+{% load humanize %}
+{% if payments_by_day %}
+<div class="list-flat">
+  {% for d, pays in payments_by_day %}
+    {% with day_total=0 %}
+      <div class="list-day-h
+        {% if d == today %}today{% endif %}
+        {% for p in pays %}{% if p.status == 'overdue' %}{% if forloop.first %}over{% endif %}{% endif %}{% endfor %}">
+        <span>
+          {{ d|date:"d F · l" }}
+          {% if d == today %}<span style="margin-left:6px;font-weight:500;text-transform:none;letter-spacing:0;color:var(--text-3)">сегодня</span>{% endif %}
+        </span>
+        <span class="sum">
+          {% with total=0 %}
+            {% for p in pays %}{% with total=total|add:p.amount %}{% endwith %}{% endfor %}
+            {{ pays|length }} платеж{{ pays|length|pluralize:"и,ей" }}
+          {% endwith %}
+        </span>
+      </div>
+      {% for p in pays %}
+      <a class="list-row" href="{% url 'counterparties:detail' p.counterparty.pk %}" style="text-decoration:none;color:inherit">
+        <div class="up-d{% if p.status == 'overdue' %}{% endif %}"
+             {% if p.status == 'overdue' %}style="background:var(--bad-soft)"{% endif %}>
+          <span class="d"{% if p.status == 'overdue' %} style="color:var(--bad)"{% endif %}>{{ d.day }}</span>
+          <span class="m"{% if p.status == 'overdue' %} style="color:var(--bad)"{% endif %}>{{ d|date:"M" }}</span>
+        </div>
+        <div>
+          <div class="up-name">
+            {% if p.counterparty.is_key_supplier %}<span style="color:var(--purple)">★</span> {% endif %}
+            {{ p.counterparty.name }}
+          </div>
+          <div class="up-meta">
+            {% if p.source_document %}<i class="bi bi-file-text"></i>{{ p.source_document.number }}{% endif %}
+            {% if p.priority == 'high' %}· <span class="chip chip-warn" style="font-size:9.5px;padding:1px 5px;margin-left:4px">высокий приор.</span>{% endif %}
+            {% if p.status == 'overdue' %}· <span class="chip chip-bad" style="font-size:9.5px;padding:1px 5px;margin-left:4px">просрочен</span>{% endif %}
+          </div>
+        </div>
+        <div class="up-amt {% if p.status == 'overdue' %}bad{% elif p.status == 'completed' %}ok{% endif %}">
+          {{ p.amount|floatformat:0|intcomma }} ₽
+          {% if p.status == 'completed' %}<i class="bi bi-check2" style="margin-left:3px"></i>{% endif %}
+        </div>
+      </a>
+      {% endfor %}
+    {% endwith %}
+  {% endfor %}
+</div>
+{% else %}
+<div style="padding:50px;text-align:center;color:var(--text-3)">
+  <i class="bi bi-calendar-x" style="font-size:32px;display:block;margin-bottom:12px"></i>
+  <div style="font-size:13px">В этом месяце платежей не запланировано</div>
+</div>
+{% endif %}

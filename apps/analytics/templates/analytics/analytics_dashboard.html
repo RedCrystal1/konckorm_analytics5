@@ -1,84 +1,184 @@
 {% extends "base.html" %}
 {% load humanize %}
-{% block title %}Аналитика{% endblock %}
-{% block content %}
-<h2>Аналитика и KPI</h2>
-{% if kpi %}
-<div class="row g-3 mt-2">
-    <div class="col-6 col-xl-2"><div class="card"><div class="card-body py-2"><div class="text-muted small">Оборачиваемость КЗ</div><h5 class="mb-0">{{ kpi.turnover_days }} дн.</h5></div></div></div>
-    <div class="col-6 col-xl-2"><div class="card"><div class="card-body py-2"><div class="text-muted small">Коэфф. погашения</div><h5 class="mb-0">{{ kpi.payment_ratio }}</h5></div></div></div>
-    <div class="col-6 col-xl-2"><div class="card"><div class="card-body py-2"><div class="text-muted small">Ср. срок оплаты</div><h5 class="mb-0">{{ kpi.avg_payment_days }} дн.</h5></div></div></div>
-    <div class="col-6 col-xl-2"><div class="card"><div class="card-body py-2"><div class="text-muted small">Доля ключевых</div><h5 class="mb-0">{{ kpi.key_supplier_share }}%</h5></div></div></div>
-    <div class="col-6 col-xl-2"><div class="card"><div class="card-body py-2"><div class="text-muted small">Ср. отклонение</div><h5 class="mb-0">{{ kpi.avg_deviation_days }} дн.</h5></div></div></div>
-    <div class="col-6 col-xl-2"><div class="card {% if kpi.cash_gap_probability > 0 %}border-danger{% endif %}"><div class="card-body py-2"><div class="text-muted small">Вероятность разрыва</div><h5 class="mb-0 {% if kpi.cash_gap_probability > 0 %}text-danger{% endif %}">{{ kpi.cash_gap_probability|default:"0" }}%</h5></div></div></div>
-</div>
-
-<div class="row mt-4">
-    <div class="col-lg-8">
-        <div class="card"><div class="card-header d-flex justify-content-between align-items-center">
-            <strong>Динамика KPI</strong>
-            <select id="kpiPeriod" class="form-select form-select-sm" style="width:auto" onchange="loadKpiChart()">
-                <option value="30">30 дней</option><option value="60">60 дней</option>
-                <option value="90" selected>90 дней</option><option value="180">Полгода</option>
-            </select>
-        </div><div class="card-body">
-            <canvas id="kpiChart" height="210"></canvas>
-        </div></div>
-    </div>
-    <div class="col-lg-4">
-        <div class="card"><div class="card-header"><strong>Прогноз потребности</strong></div><div class="card-body">
-            <dl class="row mb-0">
-                <dt class="col-6">На неделю</dt><dd class="col-6 text-end fw-bold">{{ kpi.forecast_cash_need_week|floatformat:0|intcomma|default:"—" }} ₽</dd>
-                <dt class="col-6">На месяц</dt><dd class="col-6 text-end fw-bold">{{ kpi.forecast_cash_need_month|floatformat:0|intcomma|default:"—" }} ₽</dd>
-            </dl>
-            {% if kpi.cash_gap_probability > 0 %}
-            <div class="alert alert-danger mt-3 mb-0 py-2">
-                <strong>⚠ Вероятность кассового разрыва: {{ kpi.cash_gap_probability }}%</strong><br>
-                <small><a href="{% url 'payments:alerts' %}">Посмотреть детали →</a></small>
-            </div>
-            {% endif %}
-        </div></div>
-    </div>
-</div>
-{% else %}
-<div class="alert alert-info mt-3">Аналитические данные ещё не рассчитаны. Запустите задачу пересчёта KPI.</div>
-{% endif %}
+{% block title %}Аналитика и KPI{% endblock %}
+{% block breadcrumbs %}
+  <a href="#">Анализ</a> <i class="bi bi-chevron-right sep" style="font-size:11px"></i>
+  <b>Аналитика и KPI</b>
 {% endblock %}
+
+{% block content %}
+<div class="page-content" style="padding:0 24px 24px">
+
+  <div class="page-head" style="margin:0 -24px 14px;padding:14px 24px;border-radius:0">
+    <div>
+      <h1 class="ph-title" style="margin:0">Аналитика и KPI</h1>
+      <div class="ph-sub">
+        <span class="live-dot"></span>
+        Расчётные показатели · обновление по расписанию (Celery)
+      </div>
+    </div>
+  </div>
+
+  {% if kpi %}
+  {# 6 KPI #}
+  <div class="kpi-grid" style="margin-bottom:14px">
+    <div class="kpi-card">
+      <div class="kpi-head">
+        <span class="kpi-label">Оборачиваемость КЗ</span>
+        <span class="kpi-ico"><i class="bi bi-arrow-repeat"></i></span>
+      </div>
+      <div class="kpi-value">{{ kpi.turnover_days }}<span class="u">дн.</span></div>
+      <div class="kpi-foot">средний срок расчёта</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-head">
+        <span class="kpi-label">Коэфф. погашения</span>
+        <span class="kpi-ico"><i class="bi bi-percent"></i></span>
+      </div>
+      <div class="kpi-value">{{ kpi.payment_ratio }}</div>
+      <div class="kpi-foot">отношение оплаченного к КЗ</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-head">
+        <span class="kpi-label">Ср. срок оплаты</span>
+        <span class="kpi-ico"><i class="bi bi-clock"></i></span>
+      </div>
+      <div class="kpi-value">{{ kpi.avg_payment_days }}<span class="u">дн.</span></div>
+      <div class="kpi-foot">по фактическим платежам</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-head">
+        <span class="kpi-label">Доля ключевых</span>
+        <span class="kpi-ico" style="color:var(--purple)"><i class="bi bi-star-fill"></i></span>
+      </div>
+      <div class="kpi-value" style="color:var(--purple)">{{ kpi.key_supplier_share }}<span class="u">%</span></div>
+      <div class="kpi-foot">от общей КЗ</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-head">
+        <span class="kpi-label">Ср. отклонение</span>
+        <span class="kpi-ico"><i class="bi bi-graph-up-arrow"></i></span>
+      </div>
+      <div class="kpi-value">{{ kpi.avg_deviation_days }}<span class="u">дн.</span></div>
+      <div class="kpi-foot">от планового срока</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-head">
+        <span class="kpi-label">Вер-ть разрыва</span>
+        <span class="kpi-ico"><i class="bi bi-exclamation-triangle"></i></span>
+      </div>
+      <div class="kpi-value {% if kpi.cash_gap_probability > 0 %}text-danger{% endif %}">{{ kpi.cash_gap_probability|default:"0" }}<span class="u">%</span></div>
+      <div class="kpi-foot">прогноз кассового разрыва</div>
+    </div>
+  </div>
+
+  {# Bento — график + прогноз #}
+  <div class="bento" style="padding:0">
+    <div class="card span-2">
+      <div class="card-h">
+        <div class="card-h-l">
+          <i class="bi bi-graph-up ico"></i>
+          <span>Динамика KPI</span>
+          <span class="freshness-dot"></span>
+        </div>
+        <div class="card-h-r">
+          <select id="kpiPeriod" class="form-select form-select-sm" style="width:auto;font-size:11.5px" onchange="loadKpiChart()">
+            <option value="30">Месяц</option>
+            <option value="90" selected>Квартал</option>
+            <option value="180">Полугодие</option>
+            <option value="365">Год</option>
+          </select>
+        </div>
+      </div>
+      <div class="card-h-legend">
+        <span class="lg"><span class="sw" style="background:#2563eb"></span>Общая КЗ</span>
+        <span class="lg"><span class="sw" style="background:#dc2626"></span>Просрочка</span>
+        <span class="lg"><span class="sw" style="background:#d97706"></span>Оборачиваемость (дни)</span>
+      </div>
+      <div class="chart-wrap" style="height:280px;padding:8px 12px;position:relative">
+        <canvas id="kpiChart"></canvas>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-h">
+        <div class="card-h-l"><i class="bi bi-cash-stack ico"></i>Прогноз потребности ДС</div>
+      </div>
+      <div class="kpi" style="border-bottom:1px solid var(--border)">
+        <div class="kpi-l" style="text-transform:none;letter-spacing:0;font-size:11px">На неделю</div>
+        <div class="kpi-v" style="font-size:20px">{{ kpi.forecast_cash_need_week|floatformat:0|intcomma|default:"—" }}<span class="u">₽</span></div>
+      </div>
+      <div class="kpi" style="border-bottom:1px solid var(--border)">
+        <div class="kpi-l" style="text-transform:none;letter-spacing:0;font-size:11px">На месяц</div>
+        <div class="kpi-v" style="font-size:20px">{{ kpi.forecast_cash_need_month|floatformat:0|intcomma|default:"—" }}<span class="u">₽</span></div>
+      </div>
+      {% if kpi.cash_gap_probability > 0 %}
+      <a href="{% url 'payments:alerts' %}" style="display:block;padding:14px;background:var(--bad-soft);border-top:1px solid #fecaca;text-decoration:none;color:#7f1d1d">
+        <div style="display:flex;align-items:center;gap:8px;font-size:12.5px">
+          <i class="bi bi-exclamation-triangle" style="color:var(--bad)"></i>
+          <b>Вероятность разрыва: {{ kpi.cash_gap_probability }}%</b>
+        </div>
+        <div style="font-size:11.5px;margin-top:4px">Посмотреть детали →</div>
+      </a>
+      {% endif %}
+    </div>
+  </div>
+  {% else %}
+  <div class="card">
+    <div style="padding:60px;text-align:center;color:var(--text-3)">
+      <i class="bi bi-bar-chart-line" style="font-size:48px;display:block;margin-bottom:14px"></i>
+      <div style="font-size:14px;color:var(--text);margin-bottom:6px">Аналитические данные ещё не рассчитаны</div>
+      <div style="font-size:12px">Запустите задачу пересчёта KPI или дождитесь следующего цикла Celery</div>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
+
 {% block extra_js %}
 <script>
 function loadKpiChart() {
+    if (typeof Chart === 'undefined') return;
     var days = document.getElementById('kpiPeriod').value;
     fetch('{% url "analytics:api_kpi_history" %}?days=' + days)
         .then(r => r.json())
         .then(data => {
             var ctx = document.getElementById('kpiChart');
             if (window._kpiChartInstance) window._kpiChartInstance.destroy();
+            var ctx2d = ctx.getContext('2d');
+            var g1 = ctx2d.createLinearGradient(0,0,0,280);
+            g1.addColorStop(0, 'rgba(37,99,235,.18)');
+            g1.addColorStop(1, 'rgba(37,99,235,0)');
+            var g2 = ctx2d.createLinearGradient(0,0,0,280);
+            g2.addColorStop(0, 'rgba(220,38,38,.18)');
+            g2.addColorStop(1, 'rgba(220,38,38,0)');
+
             window._kpiChartInstance = new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: data.labels,
                     datasets: [
-                        {label: 'Общая КЗ', data: data.total_debt, borderColor: '#4472C4', fill: false, tension: .3, yAxisID: 'y'},
-                        {label: 'Просроч. КЗ', data: data.overdue_debt, borderColor: '#dc3545', fill: false, tension: .3, yAxisID: 'y'},
-                        {label: 'Оборачиваемость (дни)', data: data.turnover_days, borderColor: '#e8a838', borderDash: [5,5], fill: false, tension: .3, yAxisID: 'y1'}
+                        {label: 'Общая КЗ', data: data.total_debt, borderColor: '#2563eb', backgroundColor: g1, borderWidth: 1.8, tension: .35, fill: true, pointRadius: 0, pointHoverRadius: 4, yAxisID: 'y'},
+                        {label: 'Просрочка', data: data.overdue_debt, borderColor: '#dc2626', backgroundColor: g2, borderWidth: 1.8, tension: .35, fill: true, pointRadius: 0, pointHoverRadius: 4, yAxisID: 'y'},
+                        {label: 'Оборачиваемость', data: data.turnover_days, borderColor: '#d97706', borderDash: [5,5], borderWidth: 1.5, tension: .35, fill: false, pointRadius: 0, pointHoverRadius: 4, yAxisID: 'y1'}
                     ]
                 },
                 options: {
-                    responsive: true,
+                    responsive: true, maintainAspectRatio: false,
                     interaction: { mode: 'index', intersect: false },
-                    plugins: { legend: { position: 'bottom' }, tooltip: {
-                        callbacks: { footer: function() { return 'Нажмите для детализации'; } }
-                    }},
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { backgroundColor: '#18181b', titleColor: '#fff', bodyColor: '#d4d4d8', padding: 8, cornerRadius: 5 }
+                    },
                     scales: {
-                        y: { type: 'linear', position: 'left', beginAtZero: true, ticks: { callback: v => (v/1000).toFixed(0) + ' тыс.' } },
-                        y1: { type: 'linear', position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'дни' } }
+                        x: { grid: { display: false }, border: { display: false }, ticks: { color: '#a1a1aa', font: { size: 10 }, maxTicksLimit: 12 } },
+                        y: { type: 'linear', position: 'left', beginAtZero: true, grid: { color: '#f1f1f1' }, border: { display: false }, ticks: { color: '#a1a1aa', font: { size: 10 }, callback: v => (v/1000).toFixed(0) + ' тыс.' } },
+                        y1: { type: 'linear', position: 'right', grid: { drawOnChartArea: false }, border: { display: false }, ticks: { color: '#a1a1aa', font: { size: 10 } } }
                     },
                     onClick: function(e, elements) {
-                        if (elements.length > 0) {
-                            window.location = '{% url "registers:debt_register" %}';
-                        }
-                    },
-                    onHover: function(e, elements) { e.native.target.style.cursor = elements.length > 0 ? 'pointer' : 'default'; }
+                        if (elements.length > 0) window.location = '{% url "registers:debt_register" %}';
+                    }
                 }
             });
         });

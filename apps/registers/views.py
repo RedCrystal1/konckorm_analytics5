@@ -1,6 +1,6 @@
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
-from django.db.models import Q, Sum
+from django.db.models import Q, Sum, Count
 from django.shortcuts import get_object_or_404, render
 
 from .filters import DebtByTermsFilter
@@ -14,32 +14,40 @@ def debt_register_view(request):
 
     from django.utils import timezone
 
-    qs = DebtByTerms.objects.select_related(
+    qs_base = DebtByTerms.objects.select_related(
         "counterparty", "contract", "source_document", "responsible_manager"
     ).all()
 
     # Менеджер по закупкам видит только свои
     if request.user.is_procurement:
-        qs = qs.filter(
+        qs_base = qs_base.filter(
             Q(responsible_manager=request.user)
             | Q(counterparty__user_access__user=request.user)
         ).distinct()
 
-    # Ручные фильтры из формы (до django-filter, чтобы работали оба)
+    # Применяем фильтры (search, key_only) — но НЕ status (нужно для счётчиков чипов).
+    qs_for_counts = qs_base
+
     search = request.GET.get("search", "").strip()
     if search:
-        qs = qs.filter(
+        qs_for_counts = qs_for_counts.filter(
             Q(counterparty__name__icontains=search)
             | Q(source_document__number__icontains=search)
         )
 
+    key_only = request.GET.get("key_only")
+    if key_only == "1":
+        qs_for_counts = qs_for_counts.filter(counterparty__is_key_supplier=True)
+
+    # Считаем количество записей по каждому статусу (для бейджей чипов)
+    status_counts = qs_for_counts.values("status").annotate(c=Count("id"))
+    counts = {row["status"]: row["c"] for row in status_counts}
+
+    # Финальный qs с учётом status-фильтра
+    qs = qs_for_counts
     status_filter = request.GET.get("status")
     if status_filter:
         qs = qs.filter(status=status_filter)
-
-    key_only = request.GET.get("key_only")
-    if key_only == "1":
-        qs = qs.filter(counterparty__is_key_supplier=True)
 
     # Сводка
     today = timezone.now().date()
@@ -53,7 +61,9 @@ def debt_register_view(request):
     # Добавляем days_until_due к записям
     records_list = list(qs.order_by("-overdue_days", "planned_payment_date"))
     for r in records_list:
-        r.days_until_due = (r.planned_payment_date - today).days if r.planned_payment_date else 999
+        r.days_until_due = (
+            (r.planned_payment_date - today).days if r.planned_payment_date else 999
+        )
 
     # Группировка
     group_by = request.GET.get("group_by")
@@ -99,9 +109,13 @@ def debt_register_view(request):
         other_recs = [r for r in records_list if not r.counterparty.is_key_supplier]
         grouped_data = []
         if key_recs:
-            grouped_data.append(("Ключевые поставщики (80% закупок)", key_recs, sum(float(r.amount_rub) for r in key_recs)))
+            grouped_data.append(
+                ("Ключевые поставщики (80% закупок)", key_recs, sum(float(r.amount_rub) for r in key_recs))
+            )
         if other_recs:
-            grouped_data.append(("Прочие поставщики", other_recs, sum(float(r.amount_rub) for r in other_recs)))
+            grouped_data.append(
+                ("Прочие поставщики", other_recs, sum(float(r.amount_rub) for r in other_recs))
+            )
 
     # Пагинация (только если нет группировки)
     if not grouped_data:
@@ -120,8 +134,10 @@ def debt_register_view(request):
             "records": records_display,
             "summary": summary,
             "grouped_data": grouped_data,
+            "counts": counts,
         },
     )
+
 
 @login_required
 def debt_record_detail_view(request, pk):

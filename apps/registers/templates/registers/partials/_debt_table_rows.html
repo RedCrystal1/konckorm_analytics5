@@ -1,49 +1,101 @@
 {% load humanize %}
-<table class="table table-hover table-sm mb-0">
-<thead class="table-light">
+<table class="tbl-clean">
+  <thead>
     <tr>
-        <th>Контрагент</th>
-        <th>Документ</th>
-        <th>Дата</th>
-        <th>Срок оплаты</th>
-        <th class="text-end">Сумма</th>
-        <th class="text-end">Просрочка</th>
-        <th>Дней</th>
-        <th>Статус</th>
-        <th>Менеджер</th>
+      <th>Контрагент</th>
+      <th>Документ</th>
+      <th>Срок оплаты</th>
+      <th class="r">Сумма</th>
+      <th class="r">Просрочено</th>
+      <th class="r">Дни</th>
+      <th>Статус</th>
+      <th>Менеджер</th>
     </tr>
-</thead>
-<tbody>
-{% for r in records %}
-<tr class="{% if r.source_document.is_paid %}table-success{% elif r.status == 'current' and r.days_until_due <= 3 and r.days_until_due >= 0 %}table-warning{% elif r.status == 'current' %}{% elif r.overdue_days <= 60 %}table-warning{% else %}table-danger{% endif %}"
-    onclick="window.location='{% url 'registers:debt_detail' r.pk %}'" style="cursor:pointer">
-    <td>
-        {{ r.counterparty.name|truncatechars:25 }}
-        {% if r.counterparty.is_key_supplier %}<span class="badge bg-warning text-dark" title="Ключевой поставщик">★</span>{% endif %}
-    </td>
-    <td>{{ r.source_document.number }}</td>
-    <td>{{ r.source_document.date|date:"d.m.Y" }}</td>
-    <td>{{ r.planned_payment_date|date:"d.m.Y" }}</td>
-    <td class="text-end">{{ r.amount_rub|floatformat:0|intcomma }}</td>
-    <td class="text-end">{% if r.overdue_amount > 0 %}{{ r.overdue_amount|floatformat:0|intcomma }}{% else %}—{% endif %}</td>
-    <td class="fw-bold {% if r.overdue_days > 60 %}text-danger{% elif r.overdue_days > 0 %}text-warning{% endif %}">
-        {% if r.overdue_days > 0 %}{{ r.overdue_days }}{% elif r.status == 'current' %}—{% endif %}
-    </td>
-    <td>
-        {% if r.source_document.is_paid %}<span class="badge bg-success">Оплачен</span>
-        {% elif r.status == 'current' and r.days_until_due <= 3 and r.days_until_due >= 0 %}<span class="badge" style="background:#fff3cd;color:#664d03">Скоро ({{ r.days_until_due }} дн.)</span>
-        {% elif r.status == 'current' %}<span class="badge bg-info text-dark">Текущая</span>
-        {% elif r.status == 'overdue_30' %}<span class="badge bg-warning text-dark">до 30 дн.</span>
-        {% elif r.status == 'overdue_60' %}<span class="badge bg-warning text-dark">30–60 дн.</span>
-        {% elif r.status == 'overdue_90' %}<span class="badge bg-danger">60–90 дн.</span>
-        {% elif r.status == 'overdue_90_plus' %}<span class="badge bg-danger">90+ дн.</span>
-        {% elif r.status == 'doubtful' %}<span class="badge bg-dark">Сомнит.</span>
+  </thead>
+  <tbody>
+  {% for r in records %}
+    <tr onclick="window.location='{% url 'registers:debt_detail' r.pk %}'"
+        class="{% if r.source_document.is_paid %}row-paid
+              {% elif r.status == 'doubtful' %}row-doubtful
+              {% elif r.overdue_days > 60 %}row-bad
+              {% elif r.overdue_days > 0 %}row-warn
+              {% elif r.status == 'current' and r.days_until_due <= 3 and r.days_until_due >= 0 %}row-soon
+              {% endif %}">
+      {# Контрагент с цветной меткой #}
+      <td>
+        <div class="cp">
+          <div class="cp-mark"
+               style="background:{% if r.overdue_days > 60 %}var(--bad){% elif r.overdue_days > 30 %}var(--warn){% elif r.overdue_days > 0 %}var(--warn){% elif r.counterparty.is_key_supplier %}var(--purple){% else %}var(--info){% endif %}">
+            {{ r.counterparty.name|slice:":2"|upper }}
+          </div>
+          <div>
+            <div class="cp-name">
+              {% if r.counterparty.is_key_supplier %}<span class="star">★</span>{% endif %}{{ r.counterparty.name|truncatechars:28 }}
+            </div>
+            {% if r.counterparty.inn %}<div class="cp-inn">ИНН {{ r.counterparty.inn }}</div>{% endif %}
+          </div>
+        </div>
+      </td>
+
+      {# Номер и дата документа #}
+      <td>
+        <div class="mono" style="font-size:11.5px;font-weight:500">{{ r.source_document.number }}</div>
+        {% if r.source_document.date %}
+          <div class="mono" style="font-size:10.5px;color:var(--text-3)">{{ r.source_document.date|date:"d.m.Y" }}</div>
         {% endif %}
-    </td>
-    <td class="small">{{ r.responsible_manager|default:"—" }}</td>
-</tr>
-{% empty %}
-<tr><td colspan="9" class="text-muted text-center py-3">Нет записей</td></tr>
-{% endfor %}
-</tbody>
+      </td>
+
+      {# Срок оплаты #}
+      <td class="mono" style="font-size:11.5px;color:{% if r.overdue_days > 0 %}var(--bad){% elif r.days_until_due <= 3 and r.days_until_due >= 0 %}var(--warn){% else %}var(--text-2){% endif %}">
+        {{ r.planned_payment_date|date:"d.m.Y" }}
+      </td>
+
+      {# Сумма #}
+      <td class="r mono"><b>{{ r.amount_rub|floatformat:0|intcomma }} ₽</b></td>
+
+      {# Просроченная сумма #}
+      <td class="r mono" style="color:{% if r.overdue_amount > 0 %}var(--bad){% else %}var(--text-3){% endif %}">
+        {% if r.overdue_amount > 0 %}{{ r.overdue_amount|floatformat:0|intcomma }} ₽{% else %}—{% endif %}
+      </td>
+
+      {# Дни просрочки #}
+      <td class="r mono" style="font-weight:600;color:{% if r.overdue_days > 60 %}var(--bad){% elif r.overdue_days > 0 %}var(--warn){% else %}var(--text-3){% endif %}">
+        {% if r.overdue_days > 0 %}{{ r.overdue_days }}{% elif r.status == 'current' %}—{% endif %}
+      </td>
+
+      {# Статус-чип #}
+      <td>
+        {% if r.source_document.is_paid %}
+          <span class="chip chip-ok"><i class="bi bi-check2"></i>Оплачен</span>
+        {% elif r.status == 'doubtful' %}
+          <span class="chip" style="background:#1f2937;color:#fff"><i class="bi bi-x-octagon"></i>Сомнит.</span>
+        {% elif r.status == 'overdue_90_plus' %}
+          <span class="chip chip-bad"><i class="bi bi-exclamation-octagon"></i>90+ дн</span>
+        {% elif r.status == 'overdue_90' %}
+          <span class="chip chip-bad"><i class="bi bi-clock-history"></i>60–90</span>
+        {% elif r.status == 'overdue_60' %}
+          <span class="chip chip-warn"><i class="bi bi-clock"></i>30–60</span>
+        {% elif r.status == 'overdue_30' %}
+          <span class="chip chip-warn"><i class="bi bi-hourglass-split"></i>До 30</span>
+        {% elif r.status == 'current' and r.days_until_due <= 3 and r.days_until_due >= 0 %}
+          <span class="chip chip-warn"><i class="bi bi-bell"></i>Скоро ({{ r.days_until_due }})</span>
+        {% elif r.status == 'current' %}
+          <span class="chip chip-info"><i class="bi bi-check2"></i>Текущая</span>
+        {% endif %}
+      </td>
+
+      {# Менеджер #}
+      <td style="font-size:11.5px;color:var(--text-2)">
+        {% if r.responsible_manager %}{{ r.responsible_manager|stringformat:"s"|truncatechars:18 }}{% else %}<span style="color:var(--text-3)">—</span>{% endif %}
+      </td>
+    </tr>
+  {% empty %}
+    <tr>
+      <td colspan="8" style="text-align:center;padding:40px;color:var(--text-3)">
+        <i class="bi bi-inbox" style="font-size:24px;display:block;margin-bottom:8px"></i>
+        Нет записей по выбранным фильтрам
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
 </table>

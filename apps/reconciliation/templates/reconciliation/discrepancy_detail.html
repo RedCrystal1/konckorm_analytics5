@@ -1,20 +1,49 @@
 {% extends "base.html" %}
 {% load humanize %}
 {% block title %}Расхождение{% endblock %}
+{% block breadcrumbs %}
+  <a href="{% url 'reconciliation:discrepancy_list' %}">Сверки</a> <i class="bi bi-chevron-right sep" style="font-size:11px"></i>
+  <b>{{ discrepancy.document_ref }}</b>
+{% endblock %}
+
 {% block content %}
-<h2>Расхождение: {{ discrepancy.document_ref }}</h2>
-<div class="card mt-3"><div class="card-body">
-<dl class="row">
-    <dt class="col-4">Контрагент</dt><dd class="col-8">{{ discrepancy.counterparty }}</dd>
-    <dt class="col-4">Наша сумма</dt><dd class="col-8">{{ discrepancy.our_amount|floatformat:2|intcomma }} ₽</dd>
-    <dt class="col-4">Их сумма</dt><dd class="col-8">{{ discrepancy.their_amount|floatformat:2|intcomma|default:"—" }} ₽</dd>
-    <dt class="col-4">Расхождение</dt><dd class="col-8 text-danger fw-bold">{{ discrepancy.discrepancy_amount|floatformat:2|intcomma }} ₽</dd>
-    <dt class="col-4">Причина</dt><dd class="col-8">{{ discrepancy.get_reason_display }}</dd>
-    <dt class="col-4">Статус</dt><dd class="col-8">{{ discrepancy.get_status_display }}</dd>
-    <dt class="col-4">Ответственный</dt><dd class="col-8">{{ discrepancy.responsible|default:"—" }}</dd>
-    <dt class="col-4">Комментарий</dt><dd class="col-8">{{ discrepancy.resolution_comment|default:"—" }}</dd>
-</dl></div></div>
-{% if user.is_admin or user.is_accountant %}
-<a href="{% url 'reconciliation:update_status' discrepancy.pk %}" class="btn btn-outline-primary mt-3">Изменить статус</a>
-{% endif %}
+<div class="page-content" style="padding:0 24px 24px">
+
+  <div class="page-head" style="margin:0 -24px 14px;padding:14px 24px;border-radius:0">
+    <div>
+      <h1 class="ph-title" style="margin:0">Расхождение: {{ discrepancy.document_ref }}</h1>
+      <div class="ph-sub"><span class="live-dot"></span>{{ discrepancy.counterparty.name }} · {{ discrepancy.get_reason_display }}</div>
+    </div>
+    <div class="page-head-r">
+      <a href="{% url 'reconciliation:discrepancy_list' %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-chevron-left"></i> К списку</a>
+      {% if user.is_admin or user.is_accountant %}
+      <a href="{% url 'reconciliation:update_status' discrepancy.pk %}" class="btn btn-primary btn-sm"><i class="bi bi-pencil"></i> Изменить статус</a>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card" style="max-width:720px">
+    <div class="card-h"><div class="card-h-l"><i class="bi bi-exclamation-circle ico" style="color:var(--bad)"></i>Детали расхождения</div></div>
+    <div class="props">
+      <div class="prop-row"><span class="prop-l">Контрагент</span><span class="prop-v">
+        <a href="{% url 'counterparties:detail' discrepancy.counterparty.pk %}">{{ discrepancy.counterparty }}</a>
+      </span></div>
+      <div class="prop-row"><span class="prop-l">Документ</span><span class="prop-v mono">{{ discrepancy.document_ref }}</span></div>
+      <div class="prop-row"><span class="prop-l">Наша сумма</span><span class="prop-v mono">{{ discrepancy.our_amount|floatformat:2|intcomma }} ₽</span></div>
+      <div class="prop-row"><span class="prop-l">Их сумма</span><span class="prop-v mono">{{ discrepancy.their_amount|floatformat:2|intcomma|default:"—" }} ₽</span></div>
+      <div class="prop-row"><span class="prop-l">Расхождение</span><span class="prop-v mono" style="font-weight:600;color:var(--bad)">{{ discrepancy.discrepancy_amount|floatformat:2|intcomma }} ₽</span></div>
+      <div class="prop-row"><span class="prop-l">Причина</span><span class="prop-v">{{ discrepancy.get_reason_display }}</span></div>
+      <div class="prop-row"><span class="prop-l">Статус</span><span class="prop-v">
+        {% if discrepancy.status == 'open' %}<span class="chip chip-bad"><i class="bi bi-exclamation-circle"></i>Открыто</span>
+        {% elif discrepancy.status == 'in_progress' %}<span class="chip chip-warn"><i class="bi bi-clock"></i>В работе</span>
+        {% elif discrepancy.status == 'resolved' %}<span class="chip chip-ok"><i class="bi bi-check2"></i>Закрыто</span>{% endif %}
+      </span></div>
+      <div class="prop-row"><span class="prop-l">Ответственный</span><span class="prop-v">{{ discrepancy.responsible|default:"—" }}</span></div>
+      {% if discrepancy.resolution_comment %}
+      <div class="prop-row"><span class="prop-l">Комментарий</span><span class="prop-v">{{ discrepancy.resolution_comment }}</span></div>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
 {% endblock %}

@@ -1,153 +1,98 @@
 {% extends "base.html" %}
 {% load humanize %}
 {% block title %}Договор №{{ contract.number }}{% endblock %}
+{% block breadcrumbs %}
+  <a href="{% url 'counterparties:contract_list' %}">Договоры</a> <i class="bi bi-chevron-right sep" style="font-size:11px"></i>
+  <b>№{{ contract.number }}</b>
+{% endblock %}
+
 {% block content %}
-<div class="mb-3">
-    <a href="{% url 'counterparties:contract_list' %}" class="text-decoration-none text-muted">
-        <i class="bi bi-arrow-left me-1"></i>Все договоры
-    </a>
-</div>
+<div class="page-content" style="padding:0 24px 24px">
 
-<div class="d-flex justify-content-between align-items-center mb-3">
+  <div class="page-head" style="margin:0 -24px 14px;padding:14px 24px;border-radius:0">
     <div>
-        <h2 class="mb-0">Договор №{{ contract.number }}</h2>
-        <small class="text-muted">от {{ contract.date|date:"d.m.Y" }} — {{ contract.counterparty.name }}</small>
+      <h1 class="ph-title" style="margin:0">Договор №{{ contract.number }}</h1>
+      <div class="ph-sub">
+        <span class="live-dot"></span>
+        от {{ contract.date|date:"d.m.Y" }} ·
+        <a href="{% url 'counterparties:detail' contract.counterparty.pk %}">{{ contract.counterparty.name }}</a>
+      </div>
     </div>
-    <div class="d-flex gap-2">
-        {% if contract.is_active %}
-        <span class="badge bg-success fs-6"><i class="bi bi-check-circle me-1"></i>Действует</span>
-        {% else %}
-        <span class="badge bg-secondary fs-6">Недействующий</span>
-        {% endif %}
-        {% if user.is_admin or user.is_accountant %}
-        <a href="{% url 'counterparties:contract_edit' contract.pk %}" class="btn btn-outline-primary btn-sm">
-            <i class="bi bi-pencil me-1"></i>Редактировать
+    <div class="page-head-r">
+      {% if contract.is_active %}
+        <span class="chip chip-ok" style="font-size:11.5px;padding:3px 10px"><i class="bi bi-check-circle"></i>Действует</span>
+      {% else %}
+        <span class="chip" style="background:var(--surface-2);color:var(--text-2);font-size:11.5px;padding:3px 10px"><i class="bi bi-pause"></i>Неактивен</span>
+      {% endif %}
+      <a href="{% url 'counterparties:contract_list' %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-chevron-left"></i> К списку</a>
+      {% if user.is_admin or user.is_accountant %}
+      <a href="{% url 'counterparties:contract_edit' contract.pk %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-pencil"></i> Изменить</a>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="bento" style="padding:0">
+
+    <div class="card span-2">
+      <div class="card-h"><div class="card-h-l"><i class="bi bi-file-earmark-medical ico"></i>Условия договора</div></div>
+      <div class="props">
+        <div class="prop-row">
+          <span class="prop-l">Контрагент</span>
+          <span class="prop-v">
+            <a href="{% url 'counterparties:detail' contract.counterparty.pk %}" style="font-weight:500">
+              {% if contract.counterparty.is_key_supplier %}<span style="color:var(--purple)">★</span> {% endif %}{{ contract.counterparty.name }}
+            </a>
+          </span>
+        </div>
+        <div class="prop-row"><span class="prop-l">Код 1С</span><span class="prop-v mono">{{ contract.code_1c|default:"—" }}</span></div>
+        <div class="prop-row"><span class="prop-l">Название</span><span class="prop-v">{{ contract.name|default:"—" }}</span></div>
+        <div class="prop-row">
+          <span class="prop-l">Вид</span>
+          <span class="prop-v">
+            {% if contract.kind == 'supply' %}<span class="chip chip-ok">Поставка</span>
+            {% elif contract.kind == 'service' %}<span class="chip chip-info">Услуги</span>
+            {% elif contract.kind == 'work' %}<span class="chip chip-info">Подряд</span>
+            {% elif contract.kind == 'lease' %}<span class="chip" style="background:var(--surface-2);color:var(--text-2)">Аренда</span>
+            {% else %}{{ contract.get_kind_display }}{% endif %}
+          </span>
+        </div>
+        <div class="prop-row"><span class="prop-l">Валюта</span><span class="prop-v">{{ contract.get_currency_display }}</span></div>
+        <div class="prop-row"><span class="prop-l">Условия оплаты</span><span class="prop-v">{{ contract.get_payment_term_type_display }}</span></div>
+        <div class="prop-row"><span class="prop-l">Срок оплаты</span><span class="prop-v"><b>{{ contract.payment_days }}</b> дней</span></div>
+        <div class="prop-row">
+          <span class="prop-l">Лимит кредитования</span>
+          <span class="prop-v mono">{% if contract.credit_limit %}<b>{{ contract.credit_limit|floatformat:0|intcomma }}</b> ₽{% else %}<span style="color:var(--text-3)">Не установлен</span>{% endif %}</span>
+        </div>
+        <div class="prop-row">
+          <span class="prop-l">Ставка пени</span>
+          <span class="prop-v">{% if contract.penalty_rate %}{{ contract.penalty_rate }}% за день{% else %}<span style="color:var(--text-3)">Не предусмотрены</span>{% endif %}</span>
+        </div>
+        <div class="prop-row">
+          <span class="prop-l">Период действия</span>
+          <span class="prop-v mono">{{ contract.valid_from|date:"d.m.Y"|default:"—" }} — {{ contract.valid_to|date:"d.m.Y"|default:"—" }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-h"><div class="card-h-l"><i class="bi bi-link-45deg ico"></i>Связанный контрагент</div></div>
+      <div style="padding:14px">
+        <a href="{% url 'counterparties:detail' contract.counterparty.pk %}" style="display:flex;align-items:flex-start;gap:12px;text-decoration:none;color:inherit">
+          <div class="cp-mark" style="background:{% if contract.counterparty.is_key_supplier %}var(--purple){% else %}var(--info){% endif %};width:38px;height:38px;font-size:13px">
+            {{ contract.counterparty.name|slice:":2"|upper }}
+          </div>
+          <div style="flex:1">
+            <div style="font-weight:600;font-size:13px;color:var(--text)">
+              {% if contract.counterparty.is_key_supplier %}<span style="color:var(--purple)">★</span> {% endif %}{{ contract.counterparty.name }}
+            </div>
+            <div class="mono" style="font-size:11px;color:var(--text-2);margin-top:3px">ИНН {{ contract.counterparty.inn }}</div>
+            <div style="font-size:11.5px;color:var(--accent);margin-top:6px">К карточке →</div>
+          </div>
         </a>
-        {% endif %}
+      </div>
     </div>
+
+  </div>
+
 </div>
-
-<div class="row g-4">
-    <!-- Основная информация -->
-    <div class="col-lg-7">
-        <div class="card">
-            <div class="card-header"><i class="bi bi-file-earmark-ruled me-2"></i><strong>Условия договора</strong></div>
-            <div class="card-body">
-                <dl class="row mb-0">
-                    <dt class="col-4">Контрагент</dt>
-                    <dd class="col-8">
-                        <a href="{% url 'counterparties:detail' contract.counterparty.pk %}">{{ contract.counterparty.name }}</a>
-                        {% if contract.counterparty.is_key_supplier %}<span class="badge bg-warning text-dark ms-1">Ключевой</span>{% endif %}
-                    </dd>
-                    <dt class="col-4">Код 1С</dt>
-                    <dd class="col-8"><code>{{ contract.code_1c|default:"—" }}</code></dd>
-                    <dt class="col-4">Название</dt>
-                    <dd class="col-8">{{ contract.name|default:"—" }}</dd>
-                    <dt class="col-4">Вид договора</dt>
-                    <dd class="col-8">
-                        {% if contract.kind == 'supply' %}<span class="badge bg-success">Поставка</span>
-                        {% elif contract.kind == 'service' %}<span class="badge bg-info text-dark">Услуги</span>
-                        {% elif contract.kind == 'work' %}<span class="badge bg-primary">Подряд</span>
-                        {% elif contract.kind == 'lease' %}<span class="badge bg-secondary">Аренда</span>
-                        {% else %}{{ contract.get_kind_display }}{% endif %}
-                    </dd>
-                    <dt class="col-4">Валюта</dt>
-                    <dd class="col-8">{{ contract.get_currency_display }}</dd>
-                    <dt class="col-4">Условия оплаты</dt>
-                    <dd class="col-8">{{ contract.get_payment_term_type_display }}</dd>
-                    <dt class="col-4">Срок оплаты</dt>
-                    <dd class="col-8"><strong>{{ contract.payment_days }} дней</strong></dd>
-                    <dt class="col-4">Лимит кредитования</dt>
-                    <dd class="col-8">
-                        {% if contract.credit_limit %}
-                        <strong>{{ contract.credit_limit|floatformat:0|intcomma }} ₽</strong>
-                        {% else %}<span class="text-muted">Не установлен</span>{% endif %}
-                    </dd>
-                    <dt class="col-4">Ставка пени</dt>
-                    <dd class="col-8">
-                        {% if contract.penalty_rate %}{{ contract.penalty_rate }}% за каждый день просрочки
-                        {% else %}<span class="text-muted">Не предусмотрены</span>{% endif %}
-                    </dd>
-                    <dt class="col-4">Период действия</dt>
-                    <dd class="col-8">
-                        {{ contract.valid_from|date:"d.m.Y"|default:"—" }} — {{ contract.valid_to|date:"d.m.Y"|default:"—" }}
-                    </dd>
-                </dl>
-            </div>
-        </div>
-    </div>
-
-    <!-- Боковая панель -->
-    <div class="col-lg-5">
-        <!-- Быстрые ссылки -->
-        <div class="card">
-            <div class="card-header"><i class="bi bi-link-45deg me-2"></i><strong>Связанные данные</strong></div>
-            <div class="card-body">
-                <a href="{% url 'counterparties:detail' contract.counterparty.pk %}" class="btn btn-outline-secondary btn-sm w-100 mb-2 text-start">
-                    <i class="bi bi-building me-2"></i>Карточка контрагента
-                </a>
-                <a href="{% url 'registers:debt_register' %}?search={{ contract.counterparty.name }}" class="btn btn-outline-secondary btn-sm w-100 mb-2 text-start">
-                    <i class="bi bi-clipboard-data me-2"></i>Задолженность по контрагенту
-                </a>
-                {% if user.is_admin or user.is_accountant %}
-                <a href="{% url 'counterparties:contract_create' %}?counterparty={{ contract.counterparty.pk }}" class="btn btn-outline-primary btn-sm w-100 text-start">
-                    <i class="bi bi-plus-lg me-2"></i>Новый договор с {{ contract.counterparty.name|truncatechars:20 }}
-                </a>
-                {% endif %}
-            </div>
-        </div>
-
-        <!-- Статистика по договору -->
-        <div class="card mt-3">
-            <div class="card-header"><i class="bi bi-bar-chart me-2"></i><strong>Статистика</strong></div>
-            <div class="card-body">
-                <div class="d-flex justify-content-between mb-2">
-                    <span class="text-muted">Поступлений:</span>
-                    <strong>{{ receipts|length }}</strong>
-                </div>
-                {% if receipts %}
-                <div class="d-flex justify-content-between mb-2">
-                    <span class="text-muted">Последнее:</span>
-                    <span>{{ receipts.0.date|date:"d.m.Y" }}</span>
-                </div>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Документы по договору -->
-{% if receipts %}
-<div class="card mt-4">
-    <div class="card-header"><i class="bi bi-file-earmark-text me-2"></i><strong>Поступления по договору (последние 10)</strong></div>
-    <div class="card-body p-0">
-        <table class="table table-hover table-sm mb-0">
-            <thead>
-                <tr>
-                    <th>Номер</th>
-                    <th>Дата</th>
-                    <th class="text-end">Сумма</th>
-                    <th class="text-end">Оплачено</th>
-                    <th>Статус</th>
-                </tr>
-            </thead>
-            <tbody>
-            {% for r in receipts %}
-            <tr onclick="window.location='{% url 'documents:receipt_detail' r.pk %}'" style="cursor:pointer">
-                <td><code>{{ r.number }}</code></td>
-                <td>{{ r.date|date:"d.m.Y" }}</td>
-                <td class="text-end">{{ r.amount|floatformat:0|intcomma }} ₽</td>
-                <td class="text-end">{{ r.paid_amount|floatformat:0|intcomma }} ₽</td>
-                <td>
-                    {% if r.is_paid %}<span class="badge bg-success">Оплачен</span>
-                    {% elif r.overdue_days > 0 %}<span class="badge bg-danger">Просрочен {{ r.overdue_days }} дн.</span>
-                    {% else %}<span class="badge bg-warning text-dark">Ожидает</span>{% endif %}
-                </td>
-            </tr>
-            {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</div>
-{% endif %}
 {% endblock %}

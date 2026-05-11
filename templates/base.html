@@ -2,47 +2,55 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}КонцКорма.Аналитика{% endblock %}</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}КонцКорма.Аналитика{% endblock %}</title>
 
-    <!-- Шрифты -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  {# Шрифты — Inter для интерфейса, JetBrains Mono для цифр #}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
-    <!-- Bootstrap -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  {# Bootstrap 5 — оставляем (нужен для сетки col-lg, dropdown, modal) #}
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 
-    <!-- Bootstrap Icons -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  {# Bootstrap Icons — оставляем как основной набор иконок #}
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
 
-    <!-- Кастомные стили -->
-    <link href="{% static 'css/custom.css' %}" rel="stylesheet">
+  {# Кастомные стили (новая дизайн-система) #}
+  <link href="{% static 'css/custom.css' %}" rel="stylesheet">
 
-    <!-- HTMX & Alpine -->
-    <script src="https://unpkg.com/htmx.org@2.0.4" defer></script>
-    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js" defer></script>
-    <meta name="htmx-config" content='{"defaultSwapStyle":"innerHTML"}'>
+  {# HTMX & Alpine #}
+  <script src="https://unpkg.com/htmx.org@2.0.4" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js" defer></script>
+  <meta name="htmx-config" content='{"defaultSwapStyle":"innerHTML"}'>
 
-    <style>
-        body { font-family: 'Inter', 'Segoe UI', -apple-system, sans-serif; }
-    </style>
+  {% block extra_head %}{% endblock %}
 </head>
 <body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
-    {% include "partials/_navbar.html" %}
 
-    <div class="container-fluid">
-        <div class="row">
-            {% include "partials/_sidebar.html" %}
-            <main class="col-md-9 col-lg-10 ms-sm-auto px-md-4 py-3">
-                {% include "partials/_messages.html" %}
-                {% block content %}{% endblock %}
-            </main>
-        </div>
-    </div>
+  {# Топбар — тонкая полоса 46px #}
+  {% include "partials/_navbar.html" %}
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
-    {% block extra_js %}{% endblock %}
+  {# Подпанель страницы (опционально — переопределяется в шаблонах, например в Платёжном календаре) #}
+  {% block subpanel %}{% endblock %}
+
+  {# Заголовок страницы (опционально — для страниц без своих ph-блоков) #}
+  {% block page_head %}{% endblock %}
+
+  <main class="app-layout">
+    {% include "partials/_messages.html" %}
+    {% block content %}{% endblock %}
+  </main>
+
+  {# Док-навигация — фиксированная снизу #}
+  {% include "partials/_dock.html" %}
+
+  {# Bootstrap JS bundle (для dropdown, modal, collapse) #}
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  {# Chart.js — для графиков #}
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+
+  {% block extra_js %}{% endblock %}
 </body>
 </html>

@@ -1,69 +1,89 @@
 {% extends "base.html" %}
 {% block title %}Пользователи{% endblock %}
-{% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h2 class="mb-0">Пользователи</h2>
-        <small class="text-muted">Управление учётными записями</small>
-    </div>
-    <a href="{% url 'accounts:user_create' %}" class="btn btn-primary btn-sm">
-        <i class="bi bi-person-plus me-1"></i>Новый пользователь
-    </a>
-</div>
+{% block breadcrumbs %}
+  <a href="#">Администрирование</a> <i class="bi bi-chevron-right sep" style="font-size:11px"></i>
+  <b>Пользователи</b>
+{% endblock %}
 
-<div class="card">
-    <div class="card-body p-0">
-        <table class="table table-hover mb-0">
-            <thead>
-                <tr>
-                    <th>Пользователь</th>
-                    <th>Роль</th>
-                    <th>Подразделение</th>
-                    <th>Email</th>
-                    <th>Последний вход</th>
-                    <th class="text-center">Активен</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
-            {% for u in users %}
-            <tr>
-                <td>
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width:32px;height:32px;background:linear-gradient(135deg,#2c5aa0,#4a7fd4);color:#fff;font-size:0.75rem;font-weight:700">
-                            {{ u.first_name|first|default:"?" }}{{ u.last_name|first|default:"" }}
-                        </span>
-                        <div>
-                            <div class="fw-semibold">{{ u.get_full_name|default:u.username }}</div>
-                            <small class="text-muted">@{{ u.username }}</small>
-                        </div>
-                    </div>
-                </td>
-                <td>
-                    {% if u.role == 'admin' %}<span class="badge bg-danger">Администратор</span>
-                    {% elif u.role == 'accountant' %}<span class="badge bg-primary">Бухгалтер</span>
-                    {% elif u.role == 'manager' %}<span class="badge bg-info text-dark">Руководитель</span>
-                    {% elif u.role == 'procurement' %}<span class="badge bg-warning text-dark">Закупки</span>
-                    {% endif %}
-                </td>
-                <td><small>{{ u.department|default:"—" }}</small></td>
-                <td><small>{{ u.email|default:"—" }}</small></td>
-                <td><small class="text-muted">{{ u.last_login|date:"d.m.Y H:i"|default:"Не входил" }}</small></td>
-                <td class="text-center">
-                    {% if u.is_active %}<i class="bi bi-check-circle-fill text-success"></i>
-                    {% else %}<i class="bi bi-x-circle text-muted"></i>{% endif %}
-                </td>
-                <td>
-                    <a href="{% url 'accounts:user_edit' u.pk %}" class="btn btn-sm btn-outline-primary">
-                        <i class="bi bi-pencil"></i>
-                    </a>
-                </td>
-            </tr>
-            {% empty %}
-            <tr><td colspan="7" class="text-center py-4 text-muted">Нет пользователей</td></tr>
-            {% endfor %}
-            </tbody>
-        </table>
+{% block content %}
+<div class="page-content" style="padding:0 24px 24px">
+
+  <div class="page-head" style="margin:0 -24px 14px;padding:14px 24px;border-radius:0">
+    <div>
+      <h1 class="ph-title" style="margin:0">Пользователи</h1>
+      <div class="ph-sub">
+        <span class="live-dot"></span>
+        Управление учётными записями · {{ users|length }} пользовател{{ users|length|pluralize:"ь,я,ей" }}
+      </div>
     </div>
+    <div class="page-head-r">
+      <a href="{% url 'accounts:user_create' %}" class="btn btn-primary btn-sm">
+        <i class="bi bi-person-plus"></i> Новый пользователь
+      </a>
+    </div>
+  </div>
+
+  <div class="card">
+    <table class="tbl-clean">
+      <thead>
+        <tr>
+          <th>Пользователь</th>
+          <th>Роль</th>
+          <th>Подразделение</th>
+          <th>Email</th>
+          <th>Последний вход</th>
+          <th>Активен</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for u in users %}
+        <tr>
+          <td>
+            <div class="cp">
+              <div class="cp-mark" style="background:linear-gradient(135deg,#3b82f6,#2563eb);width:28px;height:28px;font-size:11px">
+                {{ u.first_name|first|default:"?" }}{{ u.last_name|first|default:"" }}
+              </div>
+              <div>
+                <div class="cp-name">{{ u.get_full_name|default:u.username }}</div>
+                <div class="cp-inn">@{{ u.username }}</div>
+              </div>
+            </div>
+          </td>
+          <td>
+            {% if u.role == 'admin' %}<span class="chip chip-bad"><i class="bi bi-shield-fill"></i>Администратор</span>
+            {% elif u.role == 'accountant' %}<span class="chip chip-info"><i class="bi bi-calculator"></i>Бухгалтер</span>
+            {% elif u.role == 'manager' %}<span class="chip chip-purple"><i class="bi bi-briefcase"></i>Руководитель</span>
+            {% elif u.role == 'procurement' %}<span class="chip chip-warn"><i class="bi bi-cart"></i>Закупки</span>
+            {% endif %}
+          </td>
+          <td style="font-size:11.5px;color:var(--text-2)">{{ u.department|default:"—" }}</td>
+          <td style="font-size:11.5px;color:var(--text-2);font-family:'JetBrains Mono',monospace">{{ u.email|default:"—" }}</td>
+          <td style="font-size:11px;color:var(--text-3);font-family:'JetBrains Mono',monospace">
+            {{ u.last_login|date:"d.m.Y H:i"|default:"Не входил" }}
+          </td>
+          <td>
+            {% if u.is_active %}
+              <span class="chip chip-ok"><i class="bi bi-check2"></i>Активен</span>
+            {% else %}
+              <span class="chip" style="background:var(--surface-2);color:var(--text-2)"><i class="bi bi-pause"></i>Заблокирован</span>
+            {% endif %}
+          </td>
+          <td>
+            <a href="{% url 'accounts:user_edit' u.pk %}" class="btn btn-outline-primary btn-sm">
+              <i class="bi bi-pencil"></i>
+            </a>
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-3)">
+          <i class="bi bi-people" style="font-size:24px;display:block;margin-bottom:8px"></i>
+          Нет пользователей
+        </td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
 </div>
 {% endblock %}

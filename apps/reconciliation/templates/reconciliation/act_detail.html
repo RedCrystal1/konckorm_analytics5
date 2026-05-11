@@ -1,128 +1,124 @@
 {% extends "base.html" %}
 {% load humanize %}
 {% block title %}Акт сверки{% endblock %}
+{% block breadcrumbs %}
+  <a href="{% url 'reconciliation:discrepancy_list' %}">Сверки</a> <i class="bi bi-chevron-right sep" style="font-size:11px"></i>
+  <b>Акт {{ act.counterparty.name|truncatechars:24 }}</b>
+{% endblock %}
+
 {% block content %}
-<div class="mb-4">
-    <a href="{% url 'reconciliation:discrepancy_list' %}" class="text-decoration-none text-muted">
-        <i class="bi bi-arrow-left me-1"></i>Сверки
-    </a>
-</div>
+<div class="page-content" style="padding:0 24px 24px">
 
-<h2>Акт сверки с {{ act.counterparty.name }}</h2>
+  <div class="page-head" style="margin:0 -24px 14px;padding:14px 24px;border-radius:0">
+    <div>
+      <h1 class="ph-title" style="margin:0">Акт сверки</h1>
+      <div class="ph-sub">
+        <span class="live-dot"></span>
+        с <a href="{% url 'counterparties:detail' act.counterparty.pk %}">{{ act.counterparty.name }}</a> ·
+        {{ act.period_start|date:"d.m.Y" }} — {{ act.period_end|date:"d.m.Y" }}
+      </div>
+    </div>
+    <div class="page-head-r">
+      <a href="{% url 'reconciliation:discrepancy_list' %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-chevron-left"></i> К сверкам</a>
+    </div>
+  </div>
 
-<div class="row g-4 mt-2">
-    <!-- Основная информация -->
-    <div class="col-lg-7">
-        <div class="card">
-            <div class="card-header"><i class="bi bi-file-earmark-check me-2"></i><strong>Данные акта</strong></div>
-            <div class="card-body">
-                <dl class="row mb-0">
-                    <dt class="col-4">Контрагент</dt>
-                    <dd class="col-8"><a href="{% url 'counterparties:detail' act.counterparty.pk %}">{{ act.counterparty.name }}</a></dd>
-                    <dt class="col-4">ИНН</dt>
-                    <dd class="col-8"><code>{{ act.counterparty.inn }}</code></dd>
-                    <dt class="col-4">Период</dt>
-                    <dd class="col-8">{{ act.period_start|date:"d.m.Y" }} — {{ act.period_end|date:"d.m.Y" }}</dd>
-                    <dt class="col-4">Наше сальдо</dt>
-                    <dd class="col-8 fw-bold fs-5">{{ act.our_balance|floatformat:2|intcomma }} ₽</dd>
-                    <dt class="col-4">Сальдо контрагента</dt>
-                    <dd class="col-8 fs-5">
-                        {% if act.their_balance is not None %}
-                            <span class="fw-bold">{{ act.their_balance|floatformat:2|intcomma }} ₽</span>
-                        {% else %}
-                            <span class="text-muted">Не указано</span>
-                        {% endif %}
-                    </dd>
-                    <dt class="col-4">Результат</dt>
-                    <dd class="col-8">
-                        {% if act.their_balance is None %}<span class="badge bg-secondary fs-6">Ожидает данных контрагента</span>
-                        {% elif act.is_matched %}<span class="badge bg-success fs-6"><i class="bi bi-check-circle me-1"></i>Совпало</span>
-                        {% else %}<span class="badge bg-danger fs-6"><i class="bi bi-x-circle me-1"></i>Расхождение</span>{% endif %}
-                    </dd>
-                    <dt class="col-4">Создал</dt>
-                    <dd class="col-8">{{ act.created_by|default:"—" }}</dd>
-                    <dt class="col-4">Дата</dt>
-                    <dd class="col-8">{{ act.created_at|date:"d.m.Y H:i" }}</dd>
-                </dl>
+  <div class="bento" style="padding:0">
+
+    <div class="card span-2">
+      <div class="card-h"><div class="card-h-l"><i class="bi bi-file-earmark-check ico"></i>Данные акта</div></div>
+      <div class="props">
+        <div class="prop-row"><span class="prop-l">Контрагент</span><span class="prop-v">
+          <a href="{% url 'counterparties:detail' act.counterparty.pk %}">{{ act.counterparty.name }}</a>
+        </span></div>
+        <div class="prop-row"><span class="prop-l">ИНН</span><span class="prop-v mono">{{ act.counterparty.inn }}</span></div>
+        <div class="prop-row"><span class="prop-l">Период</span><span class="prop-v mono">{{ act.period_start|date:"d.m.Y" }} — {{ act.period_end|date:"d.m.Y" }}</span></div>
+        <div class="prop-row"><span class="prop-l">Наше сальдо</span><span class="prop-v mono" style="font-weight:600;font-size:14px">{{ act.our_balance|floatformat:2|intcomma }} ₽</span></div>
+        <div class="prop-row"><span class="prop-l">Сальдо контрагента</span><span class="prop-v mono" style="font-weight:600;font-size:14px">
+          {% if act.their_balance is not None %}{{ act.their_balance|floatformat:2|intcomma }} ₽{% else %}<span style="color:var(--text-3);font-weight:400;font-size:13px">Не указано</span>{% endif %}
+        </span></div>
+        <div class="prop-row"><span class="prop-l">Результат</span><span class="prop-v">
+          {% if act.their_balance is None %}<span class="chip" style="background:var(--surface-2);color:var(--text-2)"><i class="bi bi-clock"></i>Ожидает данных</span>
+          {% elif act.is_matched %}<span class="chip chip-ok"><i class="bi bi-check-circle"></i>Совпало</span>
+          {% else %}<span class="chip chip-bad"><i class="bi bi-x-circle"></i>Расхождение</span>{% endif %}
+        </span></div>
+        <div class="prop-row"><span class="prop-l">Создал</span><span class="prop-v">{{ act.created_by|default:"—" }}</span></div>
+        <div class="prop-row"><span class="prop-l">Дата</span><span class="prop-v mono">{{ act.created_at|date:"d.m.Y H:i" }}</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-h" style="background:var(--accent-soft);border-bottom-color:var(--accent)"><div class="card-h-l" style="color:var(--accent)"><i class="bi bi-pencil-square ico" style="color:var(--accent)"></i>Ввод данных контрагента</div></div>
+      <div style="padding:14px">
+        <p style="font-size:11.5px;color:var(--text-2);margin:0 0 14px">Введите сальдо из акта контрагента. Система сравнит и создаст расхождение при несовпадении.</p>
+        <form method="post">{% csrf_token %}
+          <div style="margin-bottom:14px">
+            <label class="form-label">Сальдо контрагента (₽)</label>
+            <input type="text" name="their_balance" class="form-control"
+                   placeholder="Например: 125000.50"
+                   value="{% if act.their_balance is not None %}{{ act.their_balance }}{% endif %}">
+            <div style="font-size:11px;color:var(--text-3);margin-top:4px">
+              Положительное = он считает что мы должны ему
             </div>
-        </div>
+          </div>
+          <button type="submit" class="btn btn-primary" style="width:100%"><i class="bi bi-check-lg"></i> Сверить данные</button>
+        </form>
+      </div>
     </div>
 
-    <!-- Ввод сальдо контрагента -->
-    <div class="col-lg-5">
-        <div class="card border-primary">
-            <div class="card-header bg-primary text-white"><i class="bi bi-pencil-square me-2"></i><strong>Ввод данных контрагента</strong></div>
-            <div class="card-body">
-                <p class="text-muted small">Введите сальдо из акта сверки, полученного от контрагента. Система автоматически сравнит и создаст расхождение при несовпадении.</p>
-                <form method="post">
-                    {% csrf_token %}
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Сальдо контрагента (руб.)</label>
-                        <input type="text" name="their_balance" class="form-control form-control-lg"
-                               placeholder="Например: 125000.50"
-                               value="{% if act.their_balance is not None %}{{ act.their_balance }}{% endif %}">
-                        <small class="text-muted">Положительное = контрагент считает что мы должны ему</small>
-                    </div>
-                    <button type="submit" class="btn btn-primary w-100">
-                        <i class="bi bi-check-lg me-1"></i>Сверить данные
-                    </button>
-                </form>
-            </div>
-        </div>
-
-        {% if act.their_balance is not None and not act.is_matched %}
-        <div class="card mt-3 border-danger">
-            <div class="card-body text-center">
-                <i class="bi bi-exclamation-triangle text-danger fs-2"></i>
-                <h5 class="mt-2">Расхождение</h5>
-                <p class="fs-4 fw-bold text-danger mb-1">
-                    {{ act.our_balance|floatformat:2|intcomma }} ≠ {{ act.their_balance|floatformat:2|intcomma }}
-                </p>
-                <p class="text-muted">Разница: <strong>{{ act.our_balance|add:act.their_balance|floatformat:2|intcomma }}</strong> руб.</p>
-            </div>
-        </div>
-        {% endif %}
+    {% if act.their_balance is not None and not act.is_matched %}
+    <div class="card span-3 gap-card">
+      <div class="card-h" style="background:rgba(255,255,255,.4);border-bottom-color:#fca5a5">
+        <div class="card-h-l" style="color:#7f1d1d"><i class="bi bi-exclamation-triangle ico" style="color:var(--bad)"></i>Расхождение</div>
+      </div>
+      <div class="gap-info">
+        <div class="gap-info-d">Несовпадение сальдо</div>
+        <div class="gap-info-v" style="font-size:18px">{{ act.our_balance|floatformat:2|intcomma }} ≠ {{ act.their_balance|floatformat:2|intcomma }}</div>
+        <div class="gap-info-sub">Разница: <b>{{ act.our_balance|add:act.their_balance|floatformat:2|intcomma }} ₽</b></div>
+      </div>
     </div>
+    {% endif %}
+
+    {% if discrepancies %}
+    <div class="card span-3">
+      <div class="card-h">
+        <div class="card-h-l"><i class="bi bi-exclamation-circle ico" style="color:var(--bad)"></i>Расхождения</div>
+        <div class="card-h-r"><span class="meta">{{ discrepancies|length }} шт</span></div>
+      </div>
+      <table class="tbl-clean">
+        <thead>
+          <tr>
+            <th>Документ</th>
+            <th class="r">Наша сумма</th>
+            <th class="r">Их сумма</th>
+            <th class="r">Расхождение</th>
+            <th>Причина</th>
+            <th>Статус</th>
+            <th>Ответственный</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for d in discrepancies %}
+          <tr class="{% if d.status == 'open' %}row-bad{% elif d.status == 'in_progress' %}row-warn{% endif %}">
+            <td class="mono" style="font-size:11.5px">{{ d.document_ref }}</td>
+            <td class="r mono">{{ d.our_amount|floatformat:2|intcomma }}</td>
+            <td class="r mono" style="color:var(--text-2)">{{ d.their_amount|floatformat:2|intcomma|default:"—" }}</td>
+            <td class="r mono" style="font-weight:600;color:var(--bad)">{{ d.discrepancy_amount|floatformat:2|intcomma }}</td>
+            <td style="font-size:11.5px;color:var(--text-2)">{{ d.get_reason_display }}</td>
+            <td>
+              {% if d.status == 'open' %}<span class="chip chip-bad">Открыто</span>
+              {% elif d.status == 'in_progress' %}<span class="chip chip-warn">В работе</span>
+              {% elif d.status == 'resolved' %}<span class="chip chip-ok">Закрыто</span>{% endif %}
+            </td>
+            <td style="font-size:11px;color:var(--text-2)">{{ d.responsible|default:"—" }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+
+  </div>
+
 </div>
-
-<!-- Расхождения -->
-{% if discrepancies %}
-<div class="card mt-4">
-    <div class="card-header d-flex justify-content-between">
-        <span><i class="bi bi-exclamation-circle me-2 text-danger"></i><strong>Расхождения ({{ discrepancies|length }})</strong></span>
-    </div>
-    <div class="card-body p-0">
-        <table class="table table-hover mb-0">
-            <thead>
-                <tr>
-                    <th>Документ</th>
-                    <th class="text-end">Наша сумма</th>
-                    <th class="text-end">Их сумма</th>
-                    <th class="text-end">Расхождение</th>
-                    <th>Причина</th>
-                    <th>Статус</th>
-                    <th>Ответственный</th>
-                </tr>
-            </thead>
-            <tbody>
-            {% for d in discrepancies %}
-            <tr class="{% if d.status == 'open' %}table-danger{% elif d.status == 'in_progress' %}table-warning{% endif %}">
-                <td>{{ d.document_ref }}</td>
-                <td class="text-end">{{ d.our_amount|floatformat:2|intcomma }}</td>
-                <td class="text-end">{{ d.their_amount|floatformat:2|intcomma|default:"—" }}</td>
-                <td class="text-end fw-bold text-danger">{{ d.discrepancy_amount|floatformat:2|intcomma }}</td>
-                <td>{{ d.get_reason_display }}</td>
-                <td>
-                    {% if d.status == 'open' %}<span class="badge bg-danger">Открыто</span>
-                    {% elif d.status == 'in_progress' %}<span class="badge bg-warning text-dark">В работе</span>
-                    {% elif d.status == 'resolved' %}<span class="badge bg-success">Закрыто</span>{% endif %}
-                </td>
-                <td><small>{{ d.responsible|default:"—" }}</small></td>
-            </tr>
-            {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</div>
-{% endif %}
 {% endblock %}

@@ -306,3 +306,17 @@ OVERDUE_INTERVALS = [
 UPCOMING_PAYMENT_WARNING_DAYS = 3
 PAYMENT_CALENDAR_DEFAULT_HORIZON = 30
 KEY_SUPPLIER_THRESHOLD = 0.80
+# ─────────────────────────────────────────────
+# Интеграция с 1С через стандартный REST-сервис OData
+# ─────────────────────────────────────────────
+ONEC_INTEGRATION = {
+    "BASE_URL": os.environ.get(
+        "ONEC_BASE_URL",
+        "https://msk1.1cfresh.com/a/ea/4027843/odata/standard.odata",
+    ),
+    "USERNAME": os.environ.get("ONEC_USERNAME", "odata.user"),
+    "PASSWORD": os.environ.get("ONEC_PASSWORD", ""),
+    "TIMEOUT": int(os.environ.get("ONEC_TIMEOUT", "30")),
+    "PAGE_SIZE": int(os.environ.get("ONEC_PAGE_SIZE", "100")),
+"DEFAULT_ORGANIZATION_KEY": "0c4b71d5-945e-11ee-9c8f-7cfe90a5d911",
+}

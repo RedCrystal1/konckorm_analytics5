@@ -6,6 +6,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 
 from apps.accounts.decorators import accountant_or_admin_required
 from apps.analytics.models import AnalyticsSnapshot
+from apps.documents.models import AccountBalance
 
 from .filters import ContractFilter
 from .forms import ContractForm, CounterpartyForm
@@ -51,7 +52,9 @@ def counterparty_detail_view(request, pk):
     contracts = cp.contracts.all()
 
     # Период графика: 7 / 14 / 30 дней
-    allowed_periods = [7, 14, 30]
+    # Период графика в бухгалтерских терминах:
+    # 30 — месяц, 90 — квартал, 180 — полугодие, 365 — год
+    allowed_periods = [30, 90, 180, 365]
     try:
         period = int(request.GET.get("period", 30))
     except (TypeError, ValueError):
@@ -113,6 +116,68 @@ def counterparty_detail_view(request, pk):
     last_reconciliation = ReconciliationAct.objects.filter(counterparty=cp).order_by("-created_at").first()
     open_discrepancies = Discrepancy.objects.filter(counterparty=cp, status="open") if last_reconciliation else []
 
+    # Открытые (неоплаченные) документы — для блока «Открытые документы»
+    from apps.documents.models import GoodsReceipt
+    open_documents = (
+        GoodsReceipt.objects.filter(counterparty=cp, is_paid=False)
+        .order_by("-date")[:10]
+    )
+    # Дни просрочки для каждого документа
+    for d in open_documents:
+        if d.payment_due_date:
+            d.days_overdue = (today - d.payment_due_date).days
+        else:
+            d.days_overdue = 0
+
+    # ─────────────────────────────────────────────────────────────
+    # Сальдо счёта 60.01 / 60.02 (из AccountBalance) + сверка
+    # ─────────────────────────────────────────────────────────────
+    # Опциональный пересчёт сальдо 60 по запросу пользователя:
+    # `?recalc_60=1` запускает management-команду recalc_account_60
+    # для текущего контрагента. Доступно только админу/бухгалтеру.
+    if request.GET.get("recalc_60") == "1" and (
+        getattr(request.user, "is_admin", False)
+        or getattr(request.user, "is_accountant", False)
+    ):
+        from django.core.management import call_command
+        try:
+            call_command("recalc_account_60", counterparty=cp.id)
+            messages.success(request, "Сальдо счёта 60 пересчитано.")
+        except Exception as exc:  # noqa: BLE001
+            messages.error(request, f"Ошибка пересчёта сальдо: {exc}")
+
+    acc60_01 = (
+        AccountBalance.objects
+        .filter(counterparty=cp, account="60.01")
+        .order_by("-balance_date")
+        .first()
+    )
+    acc60_02 = (
+        AccountBalance.objects
+        .filter(counterparty=cp, account="60.02")
+        .order_by("-balance_date")
+        .first()
+    )
+    acc60_date = None
+    if acc60_01:
+        acc60_date = acc60_01.balance_date
+    elif acc60_02:
+        acc60_date = acc60_02.balance_date
+
+    # Сверка: совпадает ли расчётный долг (из DebtByTerms) с сальдо 60.01?
+    # acc60_match: True — совпадает; False — расхождение; None — нет данных.
+    acc60_match = None
+    acc60_diff = 0
+    debt_calc = float(debt_summary["total_debt"] or 0)
+    debt_acc60 = float(acc60_01.balance) if acc60_01 else 0
+    if acc60_01 is None and debt_calc == 0:
+        # Оба источника пустые — считаем что совпадает
+        acc60_match = True
+    elif acc60_01 is not None:
+        acc60_diff = abs(debt_calc - debt_acc60)
+        # Совпадает если расхождение < 1 рубль (для арифметической точности)
+        acc60_match = acc60_diff < 1
+
     return render(
         request,
         "counterparties/counterparty_detail.html",
@@ -125,6 +190,14 @@ def counterparty_detail_view(request, pk):
             "open_discrepancies": open_discrepancies,
             "chart_period": period,
             "chart_periods": allowed_periods,
+            "open_documents": open_documents,
+            "today": today,
+            # Сальдо по счёту 60 + результат сверки
+            "acc60_01": acc60_01,
+            "acc60_02": acc60_02,
+            "acc60_date": acc60_date,
+            "acc60_match": acc60_match,
+            "acc60_diff": acc60_diff,
         },
     )
 

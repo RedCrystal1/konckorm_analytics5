@@ -1,19 +1,44 @@
 {% extends "base.html" %}
 {% block title %}{{ title }}{% endblock %}
+{% block breadcrumbs %}
+  <a href="#">Данные</a> <i class="bi bi-chevron-right sep" style="font-size:11px"></i>
+  <a href="{% url 'counterparties:list' %}">Контрагенты</a> <i class="bi bi-chevron-right sep" style="font-size:11px"></i>
+  <b>{{ title }}</b>
+{% endblock %}
+
 {% block content %}
-<h2>{{ title }}</h2>
-<div class="card mt-3"><div class="card-body">
-<form method="post">{% csrf_token %}
-<div class="row">
-{% for field in form %}
-<div class="col-md-6 mb-3">
-    <label class="form-label">{{ field.label }}</label>
-    {{ field }}
-    {% if field.errors %}<div class="text-danger small">{{ field.errors.0 }}</div>{% endif %}
+<div class="page-content" style="padding:0 24px 24px">
+
+  <div class="page-head" style="margin:0 -24px 14px;padding:14px 24px;border-radius:0">
+    <div>
+      <h1 class="ph-title" style="margin:0">{{ title }}</h1>
+      <div class="ph-sub"><span class="live-dot"></span>{% if form.instance.pk %}Изменение реквизитов{% else %}Заполните данные нового контрагента{% endif %}</div>
+    </div>
+    <div class="page-head-r">
+      <a href="{% url 'counterparties:list' %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-chevron-left"></i> К списку</a>
+    </div>
+  </div>
+
+  <div class="card" style="max-width:900px">
+    <div class="card-h"><div class="card-h-l"><i class="bi bi-building ico"></i>Реквизиты</div></div>
+    <div style="padding:18px">
+      <form method="post">{% csrf_token %}
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px">
+          {% for field in form %}
+          <div>
+            <label class="form-label">{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}<div style="font-size:11px;color:var(--bad);margin-top:4px">{{ field.errors.0 }}</div>{% endif %}
+          </div>
+          {% endfor %}
+        </div>
+        <div style="margin-top:18px;display:flex;gap:8px">
+          <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Сохранить</button>
+          <a href="{% url 'counterparties:list' %}" class="btn btn-outline-primary">Отмена</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
 </div>
-{% endfor %}
-</div>
-<button type="submit" class="btn btn-primary">Сохранить</button>
-<a href="{% url 'counterparties:list' %}" class="btn btn-outline-secondary">Отмена</a>
-</form></div></div>
 {% endblock %}

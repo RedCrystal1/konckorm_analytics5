@@ -38,3 +38,6 @@ Pillow>=10.0
 
 # Utilities
 python-dateutil>=2.9
+
+# Integration with 1C (OData REST API)
+requests>=2.31
