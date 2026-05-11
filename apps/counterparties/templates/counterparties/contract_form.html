@@ -1,77 +1,79 @@
 {% extends "base.html" %}
 {% block title %}{{ title }}{% endblock %}
+{% block breadcrumbs %}
+  <a href="#">Данные</a> <i class="bi bi-chevron-right sep" style="font-size:11px"></i>
+  <a href="{% url 'counterparties:contract_list' %}">Договоры</a> <i class="bi bi-chevron-right sep" style="font-size:11px"></i>
+  <b>{{ title }}</b>
+{% endblock %}
+
 {% block content %}
-<div class="mb-3">
-    <a href="{% url 'counterparties:contract_list' %}" class="text-decoration-none text-muted">
-        <i class="bi bi-arrow-left me-1"></i>Все договоры
-    </a>
-</div>
+<div class="page-content" style="padding:0 24px 24px">
 
-<div class="d-flex justify-content-between align-items-center mb-3">
+  <div class="page-head" style="margin:0 -24px 14px;padding:14px 24px;border-radius:0">
     <div>
-        <h2 class="mb-0">{{ title }}</h2>
-        <small class="text-muted">{% if contract %}Изменение условий договора{% else %}Заполните данные нового договора{% endif %}</small>
+      <h1 class="ph-title" style="margin:0">{{ title }}</h1>
+      <div class="ph-sub"><span class="live-dot"></span>{% if contract %}Изменение условий договора{% else %}Заполните данные нового договора{% endif %}</div>
     </div>
-</div>
+    <div class="page-head-r">
+      <a href="{% url 'counterparties:contract_list' %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-chevron-left"></i> К списку</a>
+    </div>
+  </div>
 
-<div class="row">
-    <div class="col-lg-8">
-        <div class="card">
-            <div class="card-header"><i class="bi bi-file-earmark-ruled me-2"></i><strong>Параметры договора</strong></div>
-            <div class="card-body">
-                <form method="post">
-                    {% csrf_token %}
-                    <div class="row g-3">
-                    {% for field in form %}
-                        <div class="{% if field.name == 'name' or field.name == 'counterparty' %}col-12{% else %}col-md-6{% endif %}">
-                            {% if field.name == 'is_active' %}
-                            <div class="form-check mt-4">
-                                {{ field }}
-                                <label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-                            </div>
-                            {% else %}
-                            <label class="form-label">{{ field.label }}</label>
-                            {{ field }}
-                            {% if field.help_text %}<small class="text-muted d-block mt-1">{{ field.help_text }}</small>{% endif %}
-                            {% if field.errors %}<div class="text-danger small mt-1">{{ field.errors.0 }}</div>{% endif %}
-                            {% endif %}
-                        </div>
-                    {% endfor %}
-                    </div>
-                    <div class="mt-4 d-flex gap-2">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-check-lg me-1"></i>{% if contract %}Сохранить изменения{% else %}Создать договор{% endif %}
-                        </button>
-                        {% if contract %}
-                        <a href="{% url 'counterparties:contract_detail' contract.pk %}" class="btn btn-outline-secondary">Отмена</a>
-                        {% else %}
-                        <a href="{% url 'counterparties:contract_list' %}" class="btn btn-outline-secondary">Отмена</a>
-                        {% endif %}
-                    </div>
-                </form>
+  <div class="bento" style="padding:0">
+    <div class="card span-2">
+      <div class="card-h"><div class="card-h-l"><i class="bi bi-file-earmark-medical ico"></i>Параметры договора</div></div>
+      <div style="padding:18px">
+        <form method="post">{% csrf_token %}
+          <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px">
+            {% for field in form %}
+            <div style="{% if field.name == 'name' or field.name == 'counterparty' %}grid-column:span 2{% endif %}">
+              {% if field.name == 'is_active' %}
+              <div style="margin-top:18px;display:flex;align-items:center;gap:8px">
+                {{ field }}
+                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+              </div>
+              {% else %}
+              <label class="form-label">{{ field.label }}</label>
+              {{ field }}
+              {% if field.help_text %}<div style="font-size:11px;color:var(--text-3);margin-top:4px">{{ field.help_text }}</div>{% endif %}
+              {% if field.errors %}<div style="font-size:11px;color:var(--bad);margin-top:4px">{{ field.errors.0 }}</div>{% endif %}
+              {% endif %}
             </div>
-        </div>
+            {% endfor %}
+          </div>
+          <div style="margin-top:18px;display:flex;gap:8px">
+            <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> {% if contract %}Сохранить{% else %}Создать{% endif %}</button>
+            {% if contract %}
+              <a href="{% url 'counterparties:contract_detail' contract.pk %}" class="btn btn-outline-primary">Отмена</a>
+            {% else %}
+              <a href="{% url 'counterparties:contract_list' %}" class="btn btn-outline-primary">Отмена</a>
+            {% endif %}
+          </div>
+        </form>
+      </div>
     </div>
 
-    <div class="col-lg-4">
-        <div class="card">
-            <div class="card-header"><i class="bi bi-info-circle me-2"></i><strong>Подсказка</strong></div>
-            <div class="card-body" style="font-size:0.85rem">
-                <p class="text-muted mb-2"><strong>Виды договоров:</strong></p>
-                <ul class="text-muted mb-3 ps-3">
-                    <li><strong>Поставка</strong> — закупка сырья, материалов, товаров</li>
-                    <li><strong>Услуги</strong> — транспорт, аренда, сертификация</li>
-                    <li><strong>Подряд</strong> — ремонт, монтаж оборудования</li>
-                    <li><strong>Аренда</strong> — аренда помещений и техники</li>
-                </ul>
-                <p class="text-muted mb-2"><strong>Условия оплаты:</strong></p>
-                <ul class="text-muted mb-0 ps-3">
-                    <li><strong>Отсрочка</strong> — оплата через N дней после поставки</li>
-                    <li><strong>Предоплата</strong> — оплата до отгрузки</li>
-                    <li><strong>По факту</strong> — оплата при получении</li>
-                </ul>
-            </div>
+    <div class="card">
+      <div class="card-h"><div class="card-h-l"><i class="bi bi-info-circle ico"></i>Подсказка</div></div>
+      <div style="padding:14px;font-size:12px">
+        <div style="margin-bottom:12px"><b style="color:var(--text);font-size:11.5px;display:block;margin-bottom:5px">Виды договоров</b>
+          <div style="color:var(--text-2);font-size:11.5px;line-height:1.6">
+            <b>Поставка</b> — закупка сырья, материалов<br>
+            <b>Услуги</b> — транспорт, аренда<br>
+            <b>Подряд</b> — ремонт, монтаж<br>
+            <b>Аренда</b> — помещений и техники
+          </div>
         </div>
+        <div><b style="color:var(--text);font-size:11.5px;display:block;margin-bottom:5px">Условия оплаты</b>
+          <div style="color:var(--text-2);font-size:11.5px;line-height:1.6">
+            <b>Отсрочка</b> — через N дней<br>
+            <b>Предоплата</b> — до отгрузки<br>
+            <b>По факту</b> — при получении
+          </div>
+        </div>
+      </div>
     </div>
+  </div>
+
 </div>
 {% endblock %}

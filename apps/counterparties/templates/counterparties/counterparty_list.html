@@ -1,47 +1,61 @@
 {% extends "base.html" %}
 {% load humanize %}
 {% block title %}Контрагенты{% endblock %}
+{% block breadcrumbs %}
+  <a href="#">Данные</a> <i class="bi bi-chevron-right sep" style="font-size:11px"></i>
+  <b>Контрагенты</b>
+{% endblock %}
+
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="page-content" style="padding:0 24px 24px">
+
+  <div class="page-head" style="margin:0 -24px 14px;padding:14px 24px;border-radius:0">
     <div>
-        <h2 class="mb-0">Контрагенты</h2>
-        <small class="text-muted">Справочник поставщиков и подрядчиков</small>
+      <h1 class="ph-title" style="margin:0">Контрагенты</h1>
+      <div class="ph-sub">
+        <span class="live-dot"></span>
+        Справочник поставщиков и подрядчиков
+        {% if counterparties %}· {{ counterparties.paginator.count|default:counterparties|length }} запис{{ counterparties.paginator.count|default:counterparties|length|pluralize:"ь,и,ей" }}{% endif %}
+      </div>
     </div>
-    {% if user.is_admin or user.is_accountant %}
-    <a href="{% url 'counterparties:create' %}" class="btn btn-primary">
-        <i class="bi bi-plus-lg me-1"></i>Новый контрагент
-    </a>
-    {% endif %}
-</div>
+    <div class="page-head-r">
+      {% if user.is_admin or user.is_accountant %}
+      <a href="{% url 'counterparties:create' %}" class="btn btn-primary btn-sm">
+        <i class="bi bi-plus-lg"></i> Новый контрагент
+      </a>
+      {% endif %}
+    </div>
+  </div>
 
-<!-- Фильтры -->
-<div class="card mb-3">
-    <div class="card-body py-2">
-        <div class="row g-2 align-items-end">
-            <div class="col-md-5">
-                <div class="input-group">
-                    <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
-                    <input type="search" name="search" class="form-control border-start-0" placeholder="Поиск по названию или ИНН..."
-                           hx-get="{% url 'counterparties:htmx_table' %}" hx-trigger="keyup changed delay:300ms"
-                           hx-target="#table-body" hx-include="[name='is_key_supplier']">
-                </div>
-            </div>
-            <div class="col-md-3">
-                <select name="is_key_supplier" class="form-select"
-                        hx-get="{% url 'counterparties:htmx_table' %}" hx-trigger="change"
-                        hx-target="#table-body" hx-include="[name='search']">
-                    <option value="">Все поставщики</option>
-                    <option value="true">★ Ключевые</option>
-                    <option value="false">Прочие</option>
-                </select>
-            </div>
-        </div>
+  <div class="card" style="margin-bottom:14px">
+    <div style="padding:10px 14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <div style="position:relative;flex:1;max-width:360px">
+        <i class="bi bi-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text-3);font-size:12px;line-height:1"></i>
+        <input type="search" name="search" class="form-control form-control-sm"
+               placeholder="Поиск по названию или ИНН..."
+               style="padding-left:30px"
+               hx-get="{% url 'counterparties:htmx_table' %}"
+               hx-trigger="keyup changed delay:300ms"
+               hx-target="#table-body"
+               hx-include="[name='is_key_supplier']">
+      </div>
+      <select name="is_key_supplier" class="form-select form-select-sm" style="width:auto"
+              hx-get="{% url 'counterparties:htmx_table' %}"
+              hx-trigger="change"
+              hx-target="#table-body"
+              hx-include="[name='search']">
+        <option value="">Все поставщики</option>
+        <option value="true">★ Ключевые</option>
+        <option value="false">Прочие</option>
+      </select>
     </div>
-</div>
+  </div>
 
-<div class="card">
-    <div class="card-body p-0" id="table-body">
-        {% include "counterparties/partials/_counterparty_table.html" %}
+  <div class="card">
+    <div id="table-body">
+      {% include "counterparties/partials/_counterparty_table.html" %}
     </div>
+  </div>
+
 </div>
 {% endblock %}

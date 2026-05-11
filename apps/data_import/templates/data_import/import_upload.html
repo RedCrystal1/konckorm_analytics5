@@ -1,86 +1,97 @@
 {% extends "base.html" %}
 {% block title %}Импорт данных{% endblock %}
+{% block breadcrumbs %}
+  <a href="#">Инструменты</a> <i class="bi bi-chevron-right sep" style="font-size:11px"></i>
+  <b>Импорт данных</b>
+{% endblock %}
+
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="page-content" style="padding:0 24px 24px">
+
+  <div class="page-head" style="margin:0 -24px 14px;padding:14px 24px;border-radius:0">
     <div>
-        <h2 class="mb-0">Импорт данных</h2>
-        <small class="text-muted">Загрузка контрагентов и договоров из XML или Excel</small>
+      <h1 class="ph-title" style="margin:0">Импорт данных</h1>
+      <div class="ph-sub"><span class="live-dot"></span>Загрузка контрагентов и договоров из XML или Excel</div>
     </div>
-    <a href="{% url 'data_import:history' %}" class="btn btn-outline-secondary btn-sm">
-        <i class="bi bi-clock-history me-1"></i>История импортов
-    </a>
-</div>
+    <div class="page-head-r">
+      <a href="{% url 'data_import:history' %}" class="btn btn-outline-primary btn-sm">
+        <i class="bi bi-clock-history"></i> История
+      </a>
+    </div>
+  </div>
 
-<div class="row g-4">
-    <div class="col-lg-7">
-        <div class="card">
-            <div class="card-header"><i class="bi bi-cloud-upload me-2 text-primary"></i><strong>Загрузка файла</strong></div>
-            <div class="card-body">
-                <form method="post" enctype="multipart/form-data">
-                    {% csrf_token %}
-                    {% for field in form %}
-                    <div class="mb-3">
-                        <label class="form-label">{{ field.label }}</label>
-                        {{ field }}
-                        {% if field.help_text %}<small class="text-muted d-block mt-1">{{ field.help_text }}</small>{% endif %}
-                        {% if field.errors %}<div class="text-danger small mt-1">{{ field.errors.0 }}</div>{% endif %}
-                    </div>
-                    {% endfor %}
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-upload me-1"></i>Загрузить и обработать
-                    </button>
-                </form>
-            </div>
-        </div>
+  <div class="bento" style="padding:0">
+    <div class="card span-2">
+      <div class="card-h">
+        <div class="card-h-l"><i class="bi bi-cloud-upload ico" style="color:var(--accent)"></i>Загрузка файла</div>
+      </div>
+      <div style="padding:18px">
+        <form method="post" enctype="multipart/form-data">
+          {% csrf_token %}
+          {% for field in form %}
+          <div style="margin-bottom:14px">
+            <label class="form-label">{{ field.label }}</label>
+            {{ field }}
+            {% if field.help_text %}<div style="font-size:11px;color:var(--text-3);margin-top:4px">{{ field.help_text }}</div>{% endif %}
+            {% if field.errors %}<div style="font-size:11.5px;color:var(--bad);margin-top:4px">{{ field.errors.0 }}</div>{% endif %}
+          </div>
+          {% endfor %}
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-upload"></i> Загрузить и обработать
+          </button>
+        </form>
+      </div>
     </div>
 
-    <div class="col-lg-5">
-        <div class="card">
-            <div class="card-header"><i class="bi bi-info-circle me-2"></i><strong>Инструкция</strong></div>
-            <div class="card-body" style="font-size:0.85rem">
-                <div class="mb-3">
-                    <div class="fw-semibold mb-1"><i class="bi bi-file-earmark-excel text-success me-1"></i>Excel (.xlsx)</div>
-                    <p class="text-muted mb-1">Файл должен содержать листы:</p>
-                    <ul class="text-muted mb-0">
-                        <li>«Контрагенты» — код 1С, наименование, ИНН, КПП, телефон, email</li>
-                        <li>«Договоры» — код 1С, код контрагента, номер, дата, вид, срок</li>
-                    </ul>
-                </div>
-                <div class="mb-3">
-                    <div class="fw-semibold mb-1"><i class="bi bi-filetype-xml text-warning me-1"></i>XML</div>
-                    <p class="text-muted mb-0">Формат выгрузки из 1С: секции «Контрагенты» и «Договоры»</p>
-                </div>
-                <div>
-                    <div class="fw-semibold mb-1"><i class="bi bi-arrow-repeat me-1"></i>Режимы</div>
-                    <ul class="text-muted mb-0">
-                        <li><strong>Первоначальная загрузка</strong> — создание новых записей</li>
-                        <li><strong>Обновление</strong> — обновление существующих + создание новых</li>
-                    </ul>
-                </div>
-            </div>
+    <div class="card">
+      <div class="card-h">
+        <div class="card-h-l"><i class="bi bi-info-circle ico"></i>Инструкция</div>
+      </div>
+      <div style="padding:14px;font-size:12.5px">
+        <div style="margin-bottom:14px">
+          <div style="font-weight:600;margin-bottom:4px"><i class="bi bi-file-earmark-excel" style="color:var(--ok)"></i> Excel (.xlsx)</div>
+          <div style="color:var(--text-2);font-size:11.5px;line-height:1.5">
+            Листы: <b>«Контрагенты»</b> (код 1С, ИНН, КПП, тел., email), <b>«Договоры»</b> (код 1С, код контрагента, номер, дата, вид, срок).
+          </div>
         </div>
-
-        <div class="card mt-3">
-            <div class="card-header"><i class="bi bi-shield-check me-2"></i><strong>Контроль качества</strong></div>
-            <div class="card-body" style="font-size:0.85rem">
-                <div class="d-flex align-items-start gap-2 mb-2">
-                    <i class="bi bi-check-circle text-success mt-1"></i>
-                    <span class="text-muted">Проверка контрольных сумм (SHA-256)</span>
-                </div>
-                <div class="d-flex align-items-start gap-2 mb-2">
-                    <i class="bi bi-check-circle text-success mt-1"></i>
-                    <span class="text-muted">Обнаружение дублей по ИНН и наименованию</span>
-                </div>
-                <div class="d-flex align-items-start gap-2 mb-2">
-                    <i class="bi bi-check-circle text-success mt-1"></i>
-                    <span class="text-muted">Валидация формата и обязательных полей</span>
-                </div>
-                <div class="d-flex align-items-start gap-2">
-                    <i class="bi bi-check-circle text-success mt-1"></i>
-                    <span class="text-muted">Ручная корректировка с логированием</span>
-                </div>
-            </div>
+        <div style="margin-bottom:14px">
+          <div style="font-weight:600;margin-bottom:4px"><i class="bi bi-filetype-xml" style="color:var(--warn)"></i> XML</div>
+          <div style="color:var(--text-2);font-size:11.5px">Формат выгрузки из 1С: секции «Контрагенты» и «Договоры».</div>
         </div>
+        <div>
+          <div style="font-weight:600;margin-bottom:4px"><i class="bi bi-arrow-repeat" style="color:var(--info)"></i> Режимы</div>
+          <ul style="color:var(--text-2);font-size:11.5px;padding-left:18px;margin:4px 0 0">
+            <li><b>Первоначальная загрузка</b> — создание новых</li>
+            <li><b>Обновление</b> — обновление + создание</li>
+          </ul>
+        </div>
+      </div>
     </div>
+
+    <div class="card span-3">
+      <div class="card-h">
+        <div class="card-h-l"><i class="bi bi-shield-check ico" style="color:var(--ok)"></i>Контроль качества</div>
+      </div>
+      <div style="padding:14px;display:grid;grid-template-columns:repeat(4,1fr);gap:10px;font-size:11.5px">
+        <div class="attn-row" style="border-bottom:none;padding:0;display:flex;align-items:center;gap:8px">
+          <i class="bi bi-check-circle" style="color:var(--ok);font-size:14px"></i>
+          <span>Контрольные суммы SHA-256</span>
+        </div>
+        <div class="attn-row" style="border-bottom:none;padding:0;display:flex;align-items:center;gap:8px">
+          <i class="bi bi-check-circle" style="color:var(--ok);font-size:14px"></i>
+          <span>Обнаружение дублей по ИНН</span>
+        </div>
+        <div class="attn-row" style="border-bottom:none;padding:0;display:flex;align-items:center;gap:8px">
+          <i class="bi bi-check-circle" style="color:var(--ok);font-size:14px"></i>
+          <span>Валидация формата и полей</span>
+        </div>
+        <div class="attn-row" style="border-bottom:none;padding:0;display:flex;align-items:center;gap:8px">
+          <i class="bi bi-check-circle" style="color:var(--ok);font-size:14px"></i>
+          <span>Логирование корректировок</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </div>
 {% endblock %}

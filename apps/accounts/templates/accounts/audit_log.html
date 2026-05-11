@@ -1,66 +1,74 @@
 {% extends "base.html" %}
 {% block title %}Журнал аудита{% endblock %}
-{% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h2 class="mb-0">Журнал аудита</h2>
-        <small class="text-muted">Последние 500 действий пользователей</small>
-    </div>
-</div>
+{% block breadcrumbs %}
+  <a href="#">Администрирование</a> <i class="bi bi-chevron-right sep" style="font-size:11px"></i>
+  <b>Журнал аудита</b>
+{% endblock %}
 
-<div class="card">
-    <div class="card-body p-0">
-        <table class="table table-hover mb-0">
-            <thead>
-                <tr>
-                    <th style="width:160px">Время</th>
-                    <th>Пользователь</th>
-                    <th>Действие</th>
-                    <th>Объект</th>
-                    <th>IP</th>
-                </tr>
-            </thead>
-            <tbody>
-            {% for log in logs %}
-            <tr>
-                <td>
-                    <small>{{ log.timestamp|date:"d.m.Y" }}</small><br>
-                    <small class="text-muted">{{ log.timestamp|date:"H:i:s" }}</small>
-                </td>
-                <td>
-                    {% if log.user %}
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width:24px;height:24px;background:rgba(44,90,160,0.1);font-size:0.65rem;font-weight:700;color:#2c5aa0">
-                            {{ log.user.first_name|first|default:"?" }}
-                        </span>
-                        <span>{{ log.user }}</span>
-                    </div>
-                    {% else %}<span class="text-muted">—</span>{% endif %}
-                </td>
-                <td>
-                    {% if 'login' in log.action %}<span class="badge bg-success">{{ log.action }}</span>
-                    {% elif 'logout' in log.action %}<span class="badge bg-secondary">{{ log.action }}</span>
-                    {% elif 'failed' in log.action %}<span class="badge bg-danger">{{ log.action }}</span>
-                    {% elif 'DELETE' in log.action %}<span class="badge bg-danger">{{ log.action }}</span>
-                    {% elif 'POST' in log.action %}<span class="badge bg-primary">{{ log.action }}</span>
-                    {% elif 'manual_correction' in log.action %}<span class="badge bg-warning text-dark">{{ log.action }}</span>
-                    {% else %}<span class="badge bg-info text-dark">{{ log.action }}</span>{% endif %}
-                </td>
-                <td>
-                    <small class="text-muted">{{ log.object_repr|truncatechars:50|default:"—" }}</small>
-                </td>
-                <td><code class="text-muted" style="font-size:0.78rem">{{ log.ip_address|default:"—" }}</code></td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="5" class="text-center py-4">
-                    <i class="bi bi-shield-check text-muted fs-3 d-block mb-2"></i>
-                    <span class="text-muted">Записей нет</span>
-                </td>
-            </tr>
-            {% endfor %}
-            </tbody>
-        </table>
+{% block content %}
+<div class="page-content" style="padding:0 24px 24px">
+
+  <div class="page-head" style="margin:0 -24px 14px;padding:14px 24px;border-radius:0">
+    <div>
+      <h1 class="ph-title" style="margin:0">Журнал аудита</h1>
+      <div class="ph-sub">
+        <span class="live-dot"></span>
+        Последние 500 действий пользователей в системе
+      </div>
     </div>
+  </div>
+
+  <div class="card">
+    <table class="tbl-clean">
+      <thead>
+        <tr>
+          <th style="width:140px">Время</th>
+          <th>Пользователь</th>
+          <th>Действие</th>
+          <th>Объект</th>
+          <th>IP</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for log in logs %}
+        <tr>
+          <td>
+            <div class="mono" style="font-size:11.5px">{{ log.timestamp|date:"d.m.Y" }}</div>
+            <div class="mono" style="font-size:10.5px;color:var(--text-3)">{{ log.timestamp|date:"H:i:s" }}</div>
+          </td>
+          <td>
+            {% if log.user %}
+              <div class="cp">
+                <div class="cp-mark" style="background:var(--surface-3);color:var(--text-2);width:22px;height:22px;font-size:9px">
+                  {{ log.user.first_name|first|default:"?" }}
+                </div>
+                <div style="font-size:12px">{{ log.user }}</div>
+              </div>
+            {% else %}
+              <span style="color:var(--text-3)">—</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if 'login' in log.action %}<span class="chip chip-ok"><i class="bi bi-box-arrow-in-right"></i>{{ log.action }}</span>
+            {% elif 'logout' in log.action %}<span class="chip" style="background:var(--surface-2);color:var(--text-2)">{{ log.action }}</span>
+            {% elif 'failed' in log.action %}<span class="chip chip-bad"><i class="bi bi-x-circle"></i>{{ log.action }}</span>
+            {% elif 'DELETE' in log.action %}<span class="chip chip-bad"><i class="bi bi-trash"></i>{{ log.action }}</span>
+            {% elif 'POST' in log.action %}<span class="chip chip-info">{{ log.action }}</span>
+            {% elif 'manual_correction' in log.action %}<span class="chip chip-warn"><i class="bi bi-pencil"></i>{{ log.action }}</span>
+            {% else %}<span class="chip" style="background:var(--surface-2);color:var(--text-2)">{{ log.action }}</span>{% endif %}
+          </td>
+          <td style="font-size:11.5px;color:var(--text-2)">{{ log.object_repr|truncatechars:50|default:"—" }}</td>
+          <td><span class="mono" style="font-size:11px;color:var(--text-3)">{{ log.ip_address|default:"—" }}</span></td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="5" style="text-align:center;padding:40px;color:var(--text-3)">
+          <i class="bi bi-shield-check" style="font-size:24px;display:block;margin-bottom:8px;color:var(--ok)"></i>
+          Записей нет
+        </td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
 </div>
 {% endblock %}

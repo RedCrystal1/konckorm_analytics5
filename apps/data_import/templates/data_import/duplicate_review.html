@@ -1,18 +1,57 @@
 {% extends "base.html" %}
 {% block title %}Ревью дублей{% endblock %}
+{% block breadcrumbs %}
+  <a href="#">Инструменты</a> <i class="bi bi-chevron-right sep" style="font-size:11px"></i>
+  <a href="{% url 'data_import:results' session.pk %}">Импорт #{{ session.pk }}</a> <i class="bi bi-chevron-right sep" style="font-size:11px"></i>
+  <b>Дубли</b>
+{% endblock %}
+
 {% block content %}
-<h2>Ревью дублей (Импорт #{{ session.pk }})</h2>
-{% for dup in duplicates %}
-<div class="card mt-3"><div class="card-body">
-    <h6>Существующий: <strong>{{ dup.existing_counterparty.name }}</strong> (ИНН: {{ dup.existing_counterparty.inn }})</h6>
-    <p class="text-muted mb-2">Совпадение по: {{ dup.match_field }} ({{ dup.match_confidence|floatformat:0 }}%)</p>
-    <form method="post" class="d-inline">{% csrf_token %}
-        <input type="hidden" name="duplicate_id" value="{{ dup.pk }}">
-        <button name="resolution" value="merge" class="btn btn-sm btn-warning">Объединить</button>
-        <button name="resolution" value="keep_both" class="btn btn-sm btn-outline-primary">Оставить оба</button>
-        <button name="resolution" value="ignore" class="btn btn-sm btn-outline-secondary">Игнорировать</button>
-    </form>
-</div></div>
-{% empty %}<div class="alert alert-success mt-3">Все дубли обработаны.</div>
-{% endfor %}
+<div class="page-content" style="padding:0 24px 24px">
+
+  <div class="page-head" style="margin:0 -24px 14px;padding:14px 24px;border-radius:0">
+    <div>
+      <h1 class="ph-title" style="margin:0">Ревью дублей</h1>
+      <div class="ph-sub"><span class="live-dot"></span>Импорт #{{ session.pk }} · обработка совпадений по ИНН и наименованию</div>
+    </div>
+  </div>
+
+  {% for dup in duplicates %}
+  <div class="card" style="margin-bottom:10px">
+    <div style="padding:14px 16px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap">
+        <div style="flex:1;min-width:280px">
+          <div style="font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Существующий контрагент</div>
+          <div style="font-weight:600;font-size:14px">{{ dup.existing_counterparty.name }}</div>
+          <div class="mono" style="font-size:11.5px;color:var(--text-2)">ИНН {{ dup.existing_counterparty.inn }}</div>
+          <div style="margin-top:8px;display:flex;gap:6px;align-items:center">
+            <span class="chip chip-warn"><i class="bi bi-link-45deg"></i>Совпадение: {{ dup.match_field }}</span>
+            <span class="chip" style="background:var(--surface-2);color:var(--text-2)">{{ dup.match_confidence|floatformat:0 }}%</span>
+          </div>
+        </div>
+        <form method="post" style="display:flex;gap:6px">{% csrf_token %}
+          <input type="hidden" name="duplicate_id" value="{{ dup.pk }}">
+          <button name="resolution" value="merge" class="btn btn-warning btn-sm" style="background:var(--warn);border-color:var(--warn);color:#fff">
+            <i class="bi bi-link"></i> Объединить
+          </button>
+          <button name="resolution" value="keep_both" class="btn btn-outline-primary btn-sm">
+            Оставить оба
+          </button>
+          <button name="resolution" value="ignore" class="btn btn-outline-primary btn-sm" style="color:var(--text-2)">
+            Игнорировать
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% empty %}
+  <div class="card">
+    <div style="padding:40px;text-align:center;color:var(--text-3)">
+      <i class="bi bi-check-circle" style="font-size:36px;display:block;margin-bottom:12px;color:var(--ok)"></i>
+      <div style="font-size:13px;color:var(--text)">Все дубли обработаны</div>
+    </div>
+  </div>
+  {% endfor %}
+
+</div>
 {% endblock %}

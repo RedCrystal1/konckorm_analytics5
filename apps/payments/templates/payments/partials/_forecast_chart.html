@@ -1,8 +1,41 @@
-<canvas id="forecastChart" height="200"></canvas>
+{% load humanize %}
+{% if forecast_data %}
+<div class="chart-wrap" style="height:200px;padding:8px 12px;position:relative">
+  <canvas id="forecastChart"></canvas>
+</div>
 <script>
-new Chart(document.getElementById('forecastChart'),{type:'bar',data:{
-    labels:[{% for b in balances %}"{{ b.date|date:'d.m' }}"{% if not forloop.last %},{% endif %}{% endfor %}],
-    datasets:[{label:'Остаток',data:[{% for b in balances %}{{ b.closing_balance }}{% if not forloop.last %},{% endif %}{% endfor %}],
-    backgroundColor:[{% for b in balances %}{% if b.is_cash_gap %}'rgba(220,53,69,0.6)'{% else %}'rgba(68,114,196,0.6)'{% endif %}{% if not forloop.last %},{% endif %}{% endfor %}]}]
-},options:{responsive:true,scales:{y:{beginAtZero:true}}}});
+document.addEventListener('DOMContentLoaded', function() {
+  if (typeof Chart === 'undefined') return;
+  const c = document.getElementById('forecastChart');
+  if (!c) return;
+
+  const labels = [{% for d in forecast_data %}"{{ d.date|date:'d.m' }}"{% if not forloop.last %},{% endif %}{% endfor %}];
+  const data = [{% for d in forecast_data %}{{ d.closing_balance }}{% if not forloop.last %},{% endif %}{% endfor %}];
+  const colors = [{% for d in forecast_data %}{% if d.is_cash_gap %}'#dc2626'{% else %}'#16a34a'{% endif %}{% if not forloop.last %},{% endif %}{% endfor %}];
+
+  new Chart(c, {
+    type: 'bar',
+    data: { labels: labels, datasets: [{ data: data, backgroundColor: colors, borderRadius: 3 }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#18181b', titleColor: '#fff', bodyColor: '#d4d4d8', padding: 8, cornerRadius: 5,
+          callbacks: { label: c => new Intl.NumberFormat('ru-RU').format(c.raw) + ' ₽' }
+        }
+      },
+      scales: {
+        x: { grid: { display: false }, border: { display: false }, ticks: { color: '#a1a1aa', font: { size: 10 } } },
+        y: { grid: { color: '#f1f1f1' }, border: { display: false }, ticks: { color: '#a1a1aa', font: { size: 10 }, callback: v => (v/1000).toFixed(0) + ' тыс.' } }
+      }
+    }
+  });
+});
 </script>
+{% else %}
+<div style="padding:30px;text-align:center;color:var(--text-3);font-size:12px">
+  <i class="bi bi-graph-up" style="font-size:24px;display:block;margin-bottom:8px"></i>
+  Данных для прогноза нет
+</div>
+{% endif %}

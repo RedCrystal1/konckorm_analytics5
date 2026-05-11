@@ -1,180 +1,173 @@
 {% extends "base.html" %}
 {% load humanize %}
 {% block title %}{{ title }}{% endblock %}
+{% block breadcrumbs %}
+  <a href="{% url 'documents:receipt_list' %}">Документы</a> <i class="bi bi-chevron-right sep" style="font-size:11px"></i>
+  <b>{{ document.number }}</b>
+{% endblock %}
+
 {% block content %}
-<div class="mb-3">
-    <a href="{% url 'documents:receipt_list' %}" class="text-decoration-none text-muted">
-        <i class="bi bi-arrow-left me-1"></i>Все поступления
-    </a>
-</div>
+<div class="page-content" style="padding:0 24px 24px">
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h2 class="mb-0">{{ title }}</h2>
-    {% if document.is_paid %}
-    <span class="badge bg-success fs-6"><i class="bi bi-check-circle me-1"></i>Оплачен</span>
-    {% else %}
-    <span class="badge bg-warning text-dark fs-6"><i class="bi bi-clock me-1"></i>Не оплачен</span>
+  <div class="page-head" style="margin:0 -24px 14px;padding:14px 24px;border-radius:0">
+    <div>
+      <h1 class="ph-title" style="margin:0">{{ title }}</h1>
+      <div class="ph-sub">
+        <span class="live-dot"></span>
+        от {{ document.date|date:"d.m.Y" }} ·
+        <a href="{% url 'counterparties:detail' document.counterparty.pk %}">{{ document.counterparty.name }}</a>
+      </div>
+    </div>
+    <div class="page-head-r">
+      {% if document.is_paid %}
+        <span class="chip chip-ok" style="font-size:11.5px;padding:3px 10px"><i class="bi bi-check-circle"></i>Оплачен</span>
+      {% else %}
+        <span class="chip chip-warn" style="font-size:11.5px;padding:3px 10px"><i class="bi bi-clock"></i>Не оплачен</span>
+      {% endif %}
+      <a href="{% url 'documents:receipt_list' %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-chevron-left"></i> К списку</a>
+    </div>
+  </div>
+
+  <div class="bento" style="padding:0">
+
+    <div class="card span-2">
+      <div class="card-h"><div class="card-h-l"><i class="bi bi-file-earmark-text ico"></i>Реквизиты документа</div></div>
+      <div class="props">
+        <div class="prop-row"><span class="prop-l">Номер</span><span class="prop-v mono">{{ document.number }}</span></div>
+        <div class="prop-row"><span class="prop-l">Дата</span><span class="prop-v mono">{{ document.date|date:"d.m.Y" }}</span></div>
+        <div class="prop-row"><span class="prop-l">Контрагент</span><span class="prop-v">
+          <a href="{% url 'counterparties:detail' document.counterparty.pk %}" style="font-weight:500">
+            {% if document.counterparty.is_key_supplier %}<span style="color:var(--purple)">★</span> {% endif %}{{ document.counterparty.name }}
+          </a></span></div>
+        <div class="prop-row"><span class="prop-l">Договор</span><span class="prop-v">{{ document.contract|default:"—" }}</span></div>
+        <div class="prop-row"><span class="prop-l">Код 1С</span><span class="prop-v mono">{{ document.code_1c|default:"—" }}</span></div>
+        <div class="prop-row"><span class="prop-l">Сумма документа</span><span class="prop-v mono" style="font-size:14px;font-weight:600">{{ document.amount|floatformat:2|intcomma }} ₽</span></div>
+        <div class="prop-row">
+          <span class="prop-l">Срок оплаты</span>
+          <span class="prop-v mono">
+            {{ document.payment_due_date|date:"d.m.Y" }}
+            {% if document.overdue_days > 0 and not document.is_paid %}
+              <span class="chip chip-bad" style="margin-left:6px"><i class="bi bi-exclamation-triangle"></i>просрочено {{ document.overdue_days }} дн</span>
+            {% endif %}
+          </span>
+        </div>
+        <div class="prop-row"><span class="prop-l">Оплачено</span><span class="prop-v mono">
+          {{ document.paid_amount|floatformat:2|intcomma }} ₽
+          {% if document.paid_amount > 0 and not document.is_paid %}
+            <span style="color:var(--text-3);font-size:11px">из {{ document.amount|floatformat:0|intcomma }}</span>
+          {% endif %}
+        </span></div>
+        <div class="prop-row">
+          <span class="prop-l">Остаток к оплате</span>
+          <span class="prop-v mono" style="font-weight:600;color:{% if document.is_paid %}var(--ok){% else %}var(--bad){% endif %}">
+            {% if document.is_paid %}0 ₽{% else %}{{ document.outstanding_amount|floatformat:2|intcomma }} ₽{% endif %}
+          </span>
+        </div>
+        {% if document.notes %}
+        <div class="prop-row"><span class="prop-l">Примечание</span><span class="prop-v">{{ document.notes }}</span></div>
+        {% endif %}
+      </div>
+    </div>
+
+    {# Управление оплатой #}
+    {% if user.is_admin or user.is_accountant %}
+    <div class="card">
+      <div class="card-h"><div class="card-h-l"><i class="bi bi-credit-card ico" style="color:var(--accent)"></i>Управление оплатой</div></div>
+      <div style="padding:14px">
+        {% if not document.is_paid %}
+          <form method="post" action="{% url 'documents:update_payment' document.pk %}" style="margin-bottom:14px">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="mark_paid">
+            <button type="submit" class="btn btn-success" style="width:100%" onclick="return confirm('Отметить документ как полностью оплаченный?')">
+              <i class="bi bi-check-circle"></i> Оплачено ({{ document.amount|floatformat:0|intcomma }} ₽)
+            </button>
+          </form>
+          <form method="post" action="{% url 'documents:update_payment' document.pk %}">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="set_partial">
+            <label class="form-label">Сумма оплаты</label>
+            <div style="display:flex;gap:0">
+              <input type="text" name="paid_amount" class="form-control" style="border-top-right-radius:0;border-bottom-right-radius:0" placeholder="Сумма" value="{{ document.paid_amount }}">
+              <span style="background:var(--surface-2);border:1px solid var(--border);border-left:none;border-radius:0 6px 6px 0;padding:7px 12px;font-size:12px;color:var(--text-2)">₽</span>
+            </div>
+            <div style="font-size:11px;color:var(--text-3);margin:4px 0">Максимум: {{ document.amount|floatformat:2|intcomma }} ₽</div>
+            <button type="submit" class="btn btn-outline-primary" style="width:100%"><i class="bi bi-pencil"></i> Обновить сумму</button>
+          </form>
+        {% else %}
+          <div style="text-align:center;padding:14px 0">
+            <i class="bi bi-check-circle" style="font-size:32px;color:var(--ok)"></i>
+            <div style="font-weight:600;margin-top:8px">Документ оплачен</div>
+            <div class="mono" style="font-size:11.5px;color:var(--text-2)">{{ document.amount|floatformat:2|intcomma }} ₽</div>
+          </div>
+          <form method="post" action="{% url 'documents:update_payment' document.pk %}">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="mark_unpaid">
+            <button type="submit" class="btn btn-outline-primary" style="width:100%;color:var(--bad);border-color:var(--border)" onclick="return confirm('Вернуть документ в статус неоплаченного?')">
+              <i class="bi bi-x-circle"></i> Отменить оплату
+            </button>
+          </form>
+        {% endif %}
+        <div style="font-size:11px;color:var(--text-3);margin-top:10px;padding:8px;background:var(--surface-2);border-radius:6px">
+          <i class="bi bi-info-circle"></i> Все изменения логируются в журнале аудита.
+        </div>
+      </div>
+    </div>
     {% endif %}
-</div>
 
-<div class="row g-4">
-    <!-- Основная информация -->
-    <div class="col-lg-7">
-        <div class="card">
-            <div class="card-header"><i class="bi bi-file-earmark-text me-2"></i><strong>Документ</strong></div>
-            <div class="card-body">
-                <dl class="row mb-0">
-                    <dt class="col-4">Номер</dt>
-                    <dd class="col-8"><code>{{ document.number }}</code></dd>
-                    <dt class="col-4">Дата</dt>
-                    <dd class="col-8">{{ document.date|date:"d.m.Y" }}</dd>
-                    <dt class="col-4">Контрагент</dt>
-                    <dd class="col-8"><a href="{% url 'counterparties:detail' document.counterparty.pk %}">{{ document.counterparty.name }}</a></dd>
-                    <dt class="col-4">Договор</dt>
-                    <dd class="col-8">{{ document.contract|default:"—" }}</dd>
-                    <dt class="col-4">Код 1С</dt>
-                    <dd class="col-8"><code>{{ document.code_1c|default:"—" }}</code></dd>
-                    <dt class="col-4">Сумма документа</dt>
-                    <dd class="col-8 fw-bold fs-5">{{ document.amount|floatformat:2|intcomma }} ₽</dd>
-                    <dt class="col-4">Срок оплаты</dt>
-                    <dd class="col-8">
-                        {{ document.payment_due_date|date:"d.m.Y" }}
-                        {% if document.overdue_days > 0 and not document.is_paid %}
-                        <span class="badge bg-danger ms-1">просрочено {{ document.overdue_days }} дн.</span>
-                        {% endif %}
-                    </dd>
-                    <dt class="col-4">Оплачено</dt>
-                    <dd class="col-8">
-                        {{ document.paid_amount|floatformat:2|intcomma }} ₽
-                        {% if document.paid_amount > 0 and not document.is_paid %}
-                        <small class="text-muted">({{ document.paid_amount|floatformat:0|intcomma }} из {{ document.amount|floatformat:0|intcomma }})</small>
-                        {% endif %}
-                    </dd>
-                    <dt class="col-4">Остаток к оплате</dt>
-                    <dd class="col-8">
-                        {% if document.is_paid %}
-                        <span class="text-success fw-bold">0 ₽</span>
-                        {% else %}
-                        <span class="text-danger fw-bold">{{ document.outstanding_amount|floatformat:2|intcomma }} ₽</span>
-                        {% endif %}
-                    </dd>
-                    {% if document.notes %}
-                    <dt class="col-4">Примечание</dt>
-                    <dd class="col-8">{{ document.notes }}</dd>
-                    {% endif %}
-                </dl>
-            </div>
-        </div>
+    {# Платёжные поручения #}
+    {% if payments %}
+    <div class="card span-3">
+      <div class="card-h">
+        <div class="card-h-l"><i class="bi bi-credit-card-2-back ico"></i>Платёжные поручения</div>
+        <div class="card-h-r"><span class="meta">{{ payments|length }} шт</span></div>
+      </div>
+      <table class="tbl-clean">
+        <thead><tr><th>Номер</th><th>Дата</th><th class="r">Сумма</th></tr></thead>
+        <tbody>
+        {% for pay in payments %}
+          <tr>
+            <td class="mono" style="font-size:11.5px">{{ pay.number }}</td>
+            <td class="mono" style="font-size:11.5px;color:var(--text-2)">{{ pay.date|date:"d.m.Y" }}</td>
+            <td class="r mono" style="color:var(--ok);font-weight:600">{{ pay.amount|floatformat:2|intcomma }} ₽</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
     </div>
+    {% endif %}
 
-    <!-- Управление оплатой -->
-    <div class="col-lg-5">
-        {% if user.is_admin or user.is_accountant %}
-        <div class="card border-primary">
-            <div class="card-header bg-primary text-white">
-                <i class="bi bi-credit-card me-2"></i><strong>Управление оплатой</strong>
-            </div>
-            <div class="card-body">
-                {% if not document.is_paid %}
-                <!-- Отметить как оплаченный -->
-                <form method="post" action="{% url 'documents:update_payment' document.pk %}" class="mb-3">
-                    {% csrf_token %}
-                    <input type="hidden" name="action" value="mark_paid">
-                    <button type="submit" class="btn btn-success w-100" onclick="return confirm('Отметить документ как полностью оплаченный?')">
-                        <i class="bi bi-check-circle me-1"></i>Отметить оплаченным ({{ document.amount|floatformat:0|intcomma }} ₽)
-                    </button>
-                </form>
-
-                <!-- Частичная оплата -->
-                <form method="post" action="{% url 'documents:update_payment' document.pk %}">
-                    {% csrf_token %}
-                    <input type="hidden" name="action" value="set_partial">
-                    <label class="form-label fw-bold">Указать сумму оплаты:</label>
-                    <div class="input-group mb-2">
-                        <input type="text" name="paid_amount" class="form-control" placeholder="Сумма" value="{{ document.paid_amount }}">
-                        <span class="input-group-text">₽</span>
-                    </div>
-                    <small class="text-muted d-block mb-2">Максимум: {{ document.amount|floatformat:2|intcomma }} ₽</small>
-                    <button type="submit" class="btn btn-outline-primary w-100">
-                        <i class="bi bi-pencil me-1"></i>Обновить сумму оплаты
-                    </button>
-                </form>
-
-                {% else %}
-                <!-- Вернуть в неоплаченные -->
-                <div class="text-center mb-3">
-                    <i class="bi bi-check-circle text-success" style="font-size:2.5rem"></i>
-                    <p class="fw-bold mt-2 mb-0">Документ полностью оплачен</p>
-                    <small class="text-muted">{{ document.amount|floatformat:2|intcomma }} ₽</small>
-                </div>
-                <form method="post" action="{% url 'documents:update_payment' document.pk %}">
-                    {% csrf_token %}
-                    <input type="hidden" name="action" value="mark_unpaid">
-                    <button type="submit" class="btn btn-outline-danger w-100" onclick="return confirm('Вернуть документ в статус неоплаченного?')">
-                        <i class="bi bi-x-circle me-1"></i>Отменить оплату
-                    </button>
-                </form>
-                {% endif %}
-
-                <div class="alert alert-info mt-3 mb-0 py-2" style="font-size:0.8rem">
-                    <i class="bi bi-info-circle me-1"></i>Все изменения логируются в журнале аудита с указанием даты, времени и ответственного.
-                </div>
-            </div>
-        </div>
-        {% endif %}
-
-        <!-- Связанные платёжные поручения -->
-        {% if payments %}
-        <div class="card mt-3">
-            <div class="card-header"><i class="bi bi-credit-card-2-back me-2"></i><strong>Платёжные поручения</strong></div>
-            <div class="card-body p-0">
-                <table class="table table-sm mb-0">
-                    <thead><tr><th>Номер</th><th>Дата</th><th class="text-end">Сумма</th></tr></thead>
-                    <tbody>
-                    {% for pay in payments %}
-                    <tr>
-                        <td><code>{{ pay.number }}</code></td>
-                        <td>{{ pay.date|date:"d.m.Y" }}</td>
-                        <td class="text-end fw-bold text-success">{{ pay.amount|floatformat:2|intcomma }} ₽</td>
-                    </tr>
-                    {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-        {% endif %}
+    {# Товарные позиции #}
+    {% if items %}
+    <div class="card span-3">
+      <div class="card-h">
+        <div class="card-h-l"><i class="bi bi-box ico"></i>Товарные позиции</div>
+        <div class="card-h-r"><span class="meta">{{ items|length }} позиц{{ items|length|pluralize:"ия,ии,ий" }}</span></div>
+      </div>
+      <table class="tbl-clean">
+        <thead><tr><th>Номенклатура</th><th class="r">Кол-во</th><th class="r">Цена</th><th class="r">Сумма</th><th class="r">НДС</th></tr></thead>
+        <tbody>
+        {% for item in items %}
+          <tr>
+            <td>{{ item.nomenclature }}</td>
+            <td class="r mono">{{ item.quantity|floatformat:0 }}</td>
+            <td class="r mono">{{ item.price|floatformat:2|intcomma }}</td>
+            <td class="r mono"><b>{{ item.amount|floatformat:2|intcomma }}</b></td>
+            <td class="r mono" style="color:var(--text-3)">{{ item.vat_amount|floatformat:2|intcomma }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr style="background:var(--surface-2)">
+            <td colspan="3" class="r" style="font-weight:600;text-transform:uppercase;font-size:10px;letter-spacing:.05em;color:var(--text-2)">Итого</td>
+            <td class="r mono" style="font-weight:700;font-size:13px">{{ document.amount|floatformat:2|intcomma }} ₽</td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
     </div>
-</div>
+    {% endif %}
 
-<!-- Товарные позиции -->
-{% if items %}
-<div class="card mt-4">
-    <div class="card-header"><i class="bi bi-box me-2"></i><strong>Товарные позиции ({{ items|length }})</strong></div>
-    <div class="card-body p-0">
-        <table class="table table-sm table-hover mb-0">
-            <thead>
-                <tr><th>Номенклатура</th><th class="text-end">Кол-во</th><th class="text-end">Цена</th><th class="text-end">Сумма</th><th class="text-end">НДС</th></tr>
-            </thead>
-            <tbody>
-            {% for item in items %}
-            <tr>
-                <td>{{ item.nomenclature }}</td>
-                <td class="text-end">{{ item.quantity|floatformat:0 }}</td>
-                <td class="text-end">{{ item.price|floatformat:2|intcomma }}</td>
-                <td class="text-end fw-bold">{{ item.amount|floatformat:2|intcomma }}</td>
-                <td class="text-end text-muted">{{ item.vat_amount|floatformat:2|intcomma }}</td>
-            </tr>
-            {% endfor %}
-            </tbody>
-            <tfoot>
-                <tr class="table-light">
-                    <td colspan="3" class="text-end fw-bold">Итого:</td>
-                    <td class="text-end fw-bold">{{ document.amount|floatformat:2|intcomma }} ₽</td>
-                    <td></td>
-                </tr>
-            </tfoot>
-        </table>
-    </div>
+  </div>
+
 </div>
-{% endif %}
 {% endblock %}

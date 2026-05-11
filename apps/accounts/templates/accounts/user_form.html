@@ -1,35 +1,44 @@
 {% extends "base.html" %}
 {% block title %}{% if form.instance.pk %}Редактирование{% else %}Создание{% endif %} пользователя{% endblock %}
-{% block content %}
-<div class="mb-4">
-    <h2 class="mb-0">{% if form.instance.pk %}Редактирование пользователя{% else %}Новый пользователь{% endif %}</h2>
-    <small class="text-muted">{% if form.instance.pk %}{{ form.instance.get_full_name }}{% else %}Заполните данные нового сотрудника{% endif %}</small>
-</div>
+{% block breadcrumbs %}
+  <a href="#">Администрирование</a> <i class="bi bi-chevron-right sep" style="font-size:11px"></i>
+  <a href="{% url 'accounts:user_list' %}">Пользователи</a> <i class="bi bi-chevron-right sep" style="font-size:11px"></i>
+  <b>{% if form.instance.pk %}Редактирование{% else %}Новый{% endif %}</b>
+{% endblock %}
 
-<div class="row">
-    <div class="col-lg-8">
-        <div class="card">
-            <div class="card-body">
-                <form method="post">
-                    {% csrf_token %}
-                    <div class="row g-3">
-                    {% for field in form %}
-                        <div class="col-md-6">
-                            <label class="form-label">{{ field.label }}</label>
-                            {{ field }}
-                            {% if field.errors %}<div class="text-danger small mt-1">{{ field.errors.0 }}</div>{% endif %}
-                        </div>
-                    {% endfor %}
-                    </div>
-                    <div class="mt-4 d-flex gap-2">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-check-lg me-1"></i>Сохранить
-                        </button>
-                        <a href="{% url 'accounts:user_list' %}" class="btn btn-outline-secondary">Отмена</a>
-                    </div>
-                </form>
-            </div>
-        </div>
+{% block content %}
+<div class="page-content" style="padding:0 24px 24px">
+
+  <div class="page-head" style="margin:0 -24px 14px;padding:14px 24px;border-radius:0">
+    <div>
+      <h1 class="ph-title" style="margin:0">{% if form.instance.pk %}Редактирование пользователя{% else %}Новый пользователь{% endif %}</h1>
+      <div class="ph-sub"><span class="live-dot"></span>{% if form.instance.pk %}{{ form.instance.get_full_name }}{% else %}Заполните данные нового сотрудника{% endif %}</div>
     </div>
+    <div class="page-head-r">
+      <a href="{% url 'accounts:user_list' %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-chevron-left"></i> К списку</a>
+    </div>
+  </div>
+
+  <div class="card" style="max-width:900px">
+    <div class="card-h"><div class="card-h-l"><i class="bi bi-person ico"></i>Данные пользователя</div></div>
+    <div style="padding:18px">
+      <form method="post">{% csrf_token %}
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px">
+          {% for field in form %}
+          <div>
+            <label class="form-label">{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}<div style="font-size:11px;color:var(--bad);margin-top:4px">{{ field.errors.0 }}</div>{% endif %}
+          </div>
+          {% endfor %}
+        </div>
+        <div style="margin-top:18px;display:flex;gap:8px">
+          <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Сохранить</button>
+          <a href="{% url 'accounts:user_list' %}" class="btn btn-outline-primary">Отмена</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
 </div>
 {% endblock %}

@@ -1,15 +1,43 @@
 {% load humanize %}
-<div class="text-center mb-3">
-    <strong>{{ month }}/{{ year }}</strong>
+{# Календарная сетка месяца. Ячейка с платежами кликабельна — открывает HTMX-попап. #}
+<div class="cal-big">
+  <div class="wd">Пн</div><div class="wd">Вт</div><div class="wd">Ср</div>
+  <div class="wd">Чт</div><div class="wd">Пт</div><div class="wd">Сб</div><div class="wd">Вс</div>
+
+  {% for day in calendar_data %}
+    {% with first_payment=day.payments.0 %}
+    <div class="cb
+      {% if not day.in_month %}cb-out{% endif %}
+      {% if day.is_today %}today{% endif %}
+      {% if day.cell_status == 'gap' %}has-overdue
+      {% elif day.cell_status == 'overdue' %}has-overdue
+      {% elif day.cell_status == 'paid' %}has-paid
+      {% elif day.cell_status == 'pending' %}has-pay
+      {% endif %}
+      {% if first_payment %}is-clickable{% endif %}"
+      {% if first_payment %}
+        hx-get="{% url 'payments:htmx_day_detail' day.date|date:'Y-m-d' %}"
+        hx-target="#dayPopup"
+        hx-swap="innerHTML"
+        hx-trigger="click"
+        title="{{ day.payments|length }} платеж{{ day.payments|length|pluralize:'и,ей' }} · клик для деталей"
+      {% endif %}>
+      <span class="cb-d">{{ day.date.day }}</span>
+      {% if first_payment %}
+        <span class="cb-pay">{{ first_payment.amount|floatformat:0|intcomma }}</span>
+        <span class="cb-cp">
+          {% if first_payment.counterparty.is_key_supplier %}★ {% endif %}{{ first_payment.counterparty.name|truncatechars:14 }}
+        </span>
+        {% if day.payments|length > 1 %}
+          <span class="cb-more">+{{ day.payments|length|add:"-1" }}</span>
+        {% endif %}
+      {% endif %}
+      {% if day.cell_status == 'gap' %}
+        <span class="cb-tag">⚠ разрыв</span>
+      {% elif day.cell_status == 'overdue' %}
+        <span class="cb-tag">просрочен</span>
+      {% endif %}
+    </div>
+    {% endwith %}
+  {% endfor %}
 </div>
-<table class="table table-bordered table-sm">
-<thead><tr><th>Пн</th><th>Вт</th><th>Ср</th><th>Чт</th><th>Пт</th><th>Сб</th><th>Вс</th></tr></thead>
-<tbody><tr>
-{% for day in calendar_data %}
-    <td class="{% if not day.in_month %}text-muted bg-light{% endif %} {% if day.is_cash_gap %}bg-danger bg-opacity-10{% endif %}" style="min-width:80px;min-height:60px;vertical-align:top;">
-        <small>{{ day.date.day }}</small>
-        {% for p in day.payments %}<div class="small text-truncate">{{ p.counterparty.name|truncatechars:12 }}: {{ p.amount|floatformat:0 }}</div>{% endfor %}
-    </td>
-    {% if forloop.counter|divisibleby:7 %}</tr><tr>{% endif %}
-{% endfor %}
-</tr></tbody></table>

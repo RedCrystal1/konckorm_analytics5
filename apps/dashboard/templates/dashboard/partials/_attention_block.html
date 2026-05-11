@@ -1,0 +1,51 @@
+{% load humanize %}
+{# Блок «Требует внимания» — компактный список с переходами в проблемные разделы #}
+<div class="attn-list">
+
+  {# Кассовый разрыв #}
+  {% if not user.is_procurement %}
+  <a class="attn-row" href="{% url 'payments:alerts' %}" title="Кассовые разрывы">
+    <div class="ev-icon bad"><i class="bi bi-exclamation-triangle"></i></div>
+    <div>
+      <div class="attn-title">Кассовые разрывы</div>
+      <div class="attn-meta">Прогноз на 30 дней</div>
+    </div>
+    <i class="bi bi-chevron-right" style="color:var(--text-3)"></i>
+  </a>
+  {% endif %}
+
+  {# Открытые расхождения #}
+  {% if not user.is_procurement %}
+  <a class="attn-row" href="{% url 'reconciliation:discrepancy_list' %}" title="Сверки с расхождениями">
+    <div class="ev-icon warn"><i class="bi bi-arrow-left-right"></i></div>
+    <div>
+      <div class="attn-title">Открытые расхождения</div>
+      <div class="attn-meta">Требуют согласования</div>
+    </div>
+    <i class="bi bi-chevron-right" style="color:var(--text-3)"></i>
+  </a>
+  {% endif %}
+
+  {# Предстоящие платежи #}
+  {% if not user.is_procurement %}
+  <a class="attn-row" href="{% url 'payments:calendar' %}" title="Платёжный календарь">
+    <div class="ev-icon info"><i class="bi bi-calendar3"></i></div>
+    <div>
+      <div class="attn-title">Платежи на 7 дней</div>
+      <div class="attn-meta">{{ kpi.upcoming_count|default:0 }} платеж{{ kpi.upcoming_count|default:0|pluralize:"и,ей" }} · {{ kpi.upcoming_total|floatformat:0|intcomma }} ₽</div>
+    </div>
+    <i class="bi bi-chevron-right" style="color:var(--text-3)"></i>
+  </a>
+  {% endif %}
+
+  {# Сомнительная задолженность #}
+  <a class="attn-row" href="{% url 'registers:debt_register' %}?status=doubtful" title="Сомнительная задолженность">
+    <div class="ev-icon bad"><i class="bi bi-clipboard-x"></i></div>
+    <div>
+      <div class="attn-title">Сомнительная задолженность</div>
+      <div class="attn-meta">Документы старше 90 дней</div>
+    </div>
+    <i class="bi bi-chevron-right" style="color:var(--text-3)"></i>
+  </a>
+
+</div>

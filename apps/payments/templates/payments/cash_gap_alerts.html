@@ -1,13 +1,63 @@
 {% extends "base.html" %}
 {% load humanize %}
 {% block title %}Кассовые разрывы{% endblock %}
+{% block breadcrumbs %}
+  <a href="#">Анализ</a> <i class="bi bi-chevron-right sep" style="font-size:11px"></i>
+  <b>Кассовые разрывы</b>
+{% endblock %}
+
 {% block content %}
-<h2>Предупреждения о кассовых разрывах</h2>
-<table class="table table-sm mt-3">
-<thead><tr><th>Дата</th><th class="text-end">Дефицит</th><th>Принято</th><th>Создано</th></tr></thead>
-<tbody>{% for a in alerts %}
-<tr class="table-danger"><td>{{ a.date|date:"d.m.Y" }}</td><td class="text-end">{{ a.deficit_amount|floatformat:0|intcomma }} ₽</td>
-<td>{% if a.is_acknowledged %}✓ {{ a.acknowledged_by }}{% else %}—{% endif %}</td><td>{{ a.created_at|date:"d.m.Y H:i" }}</td></tr>
-{% empty %}<tr><td colspan="4" class="text-muted text-center py-3">Кассовых разрывов не обнаружено</td></tr>{% endfor %}
-</tbody></table>
+<div class="page-content" style="padding:0 24px 24px">
+
+  <div class="page-head" style="margin:0 -24px 14px;padding:14px 24px;border-radius:0">
+    <div>
+      <h1 class="ph-title" style="margin:0">Кассовые разрывы</h1>
+      <div class="ph-sub">
+        <span class="live-dot"></span>
+        Прогноз на 30 дней · {{ alerts|length }} разрыв{{ alerts|length|pluralize:",а,ов" }}
+      </div>
+    </div>
+    <div class="page-head-r">
+      <a href="{% url 'payments:calendar' %}" class="btn btn-outline-primary btn-sm">
+        <i class="bi bi-chevron-left"></i> К календарю
+      </a>
+    </div>
+  </div>
+
+  {% if alerts %}
+  <div class="bento" style="padding:0">
+    {% for a in alerts %}
+    <div class="card gap-card span-3" style="margin-bottom:0">
+      <div class="card-h" style="background:rgba(255,255,255,.4);border-bottom-color:#fca5a5">
+        <div class="card-h-l" style="color:#7f1d1d">
+          <i class="bi bi-exclamation-triangle ico" style="color:var(--bad)"></i>
+          Разрыв {{ a.date|date:"d M Y" }}
+        </div>
+        <div class="card-h-r">
+          {% if a.is_acknowledged %}
+            <span class="chip chip-ok"><i class="bi bi-check2"></i>Принято {{ a.acknowledged_by }}</span>
+          {% else %}
+            <span class="chip chip-bad"><i class="bi bi-bell"></i>Требует внимания</span>
+          {% endif %}
+          <span style="color:var(--text-3);font-size:11px">создано {{ a.created_at|date:"d.m.Y H:i" }}</span>
+        </div>
+      </div>
+      <div class="gap-info">
+        <div class="gap-info-d">Прогнозируемый дефицит</div>
+        <div class="gap-info-v">−{{ a.deficit_amount|floatformat:0|intcomma }} ₽</div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="card">
+    <div style="padding:60px;text-align:center;color:var(--text-3)">
+      <i class="bi bi-shield-check" style="font-size:48px;display:block;margin-bottom:14px;color:var(--ok)"></i>
+      <div style="font-size:15px;font-weight:500;color:var(--text);margin-bottom:6px">Кассовых разрывов нет</div>
+      <div style="font-size:12.5px">На горизонте 30 дней дефицитов денежных средств не прогнозируется</div>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
 {% endblock %}

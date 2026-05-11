@@ -1,9 +1,37 @@
 {% extends "base.html" %}
+{% block title %}Деактивация пользователя{% endblock %}
+{% block breadcrumbs %}
+  <a href="{% url 'accounts:user_list' %}">Пользователи</a> <i class="bi bi-chevron-right sep" style="font-size:11px"></i>
+  <b>Деактивация</b>
+{% endblock %}
+
 {% block content %}
-<h2>Деактивация пользователя</h2>
-<div class="alert alert-warning mt-3">Вы действительно хотите деактивировать пользователя <strong>{{ user_obj.get_full_name }}</strong>?</div>
-<form method="post">{% csrf_token %}
-<button type="submit" class="btn btn-danger">Деактивировать</button>
-<a href="{% url 'accounts:user_list' %}" class="btn btn-outline-secondary">Отмена</a>
-</form>
+<div class="page-content" style="padding:0 24px 24px">
+
+  <div class="page-head" style="margin:0 -24px 14px;padding:14px 24px;border-radius:0">
+    <div>
+      <h1 class="ph-title" style="margin:0">Деактивация пользователя</h1>
+      <div class="ph-sub"><span class="live-dot"></span>Подтверждение действия</div>
+    </div>
+  </div>
+
+  <div class="card" style="max-width:540px">
+    <div class="card-h"><div class="card-h-l" style="color:var(--bad)"><i class="bi bi-exclamation-triangle ico" style="color:var(--bad)"></i>Подтверждение</div></div>
+    <div style="padding:18px;font-size:13px">
+      <p style="margin:0 0 14px">
+        Вы действительно хотите деактивировать пользователя <b>{{ user_obj.get_full_name }}</b>?
+      </p>
+      <div style="background:var(--bad-soft);border:1px solid #fecaca;color:#7f1d1d;padding:10px 12px;border-radius:8px;font-size:12px;margin-bottom:18px">
+        <b>Внимание:</b> учётная запись будет заблокирована, пользователь не сможет войти. Данные сохраняются.
+      </div>
+      <form method="post">{% csrf_token %}
+        <div style="display:flex;gap:8px">
+          <button type="submit" class="btn btn-danger"><i class="bi bi-pause-circle"></i> Деактивировать</button>
+          <a href="{% url 'accounts:user_list' %}" class="btn btn-outline-primary">Отмена</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+</div>
 {% endblock %}

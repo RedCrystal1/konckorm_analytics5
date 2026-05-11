@@ -1,67 +1,86 @@
 {% extends "base.html" %}
 {% load humanize %}
 {% block title %}Расхождения{% endblock %}
-{% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h2 class="mb-0">Расхождения при сверке</h2>
-        <small class="text-muted">Контроль урегулирования расхождений с контрагентами</small>
-    </div>
-    {% if user.is_admin or user.is_accountant %}
-    <a href="{% url 'reconciliation:generate_act' %}" class="btn btn-primary btn-sm">
-        <i class="bi bi-plus-lg me-1"></i>Сформировать акт сверки
-    </a>
-    {% endif %}
-</div>
+{% block breadcrumbs %}
+  <a href="#">Анализ</a> <i class="bi bi-chevron-right sep" style="font-size:11px"></i>
+  <b>Сверки</b>
+{% endblock %}
 
-<div class="card">
-    <div class="card-body p-0">
-        <table class="table table-hover mb-0">
-            <thead>
-                <tr>
-                    <th>Контрагент</th>
-                    <th>Документ</th>
-                    <th class="text-end">Наша сумма</th>
-                    <th class="text-end">Их сумма</th>
-                    <th class="text-end">Расхождение</th>
-                    <th>Причина</th>
-                    <th>Статус</th>
-                    <th>Ответственный</th>
-                </tr>
-            </thead>
-            <tbody>
-            {% for d in discrepancies %}
-            <tr onclick="window.location='{% url 'reconciliation:discrepancy_detail' d.pk %}'" style="cursor:pointer"
-                class="{% if d.status == 'open' %}table-danger{% elif d.status == 'in_progress' %}table-warning{% endif %}">
-                <td class="fw-semibold">{{ d.counterparty.name|truncatechars:25 }}</td>
-                <td><code>{{ d.document_ref|truncatechars:20 }}</code></td>
-                <td class="text-end">{{ d.our_amount|floatformat:2|intcomma }}</td>
-                <td class="text-end">{{ d.their_amount|floatformat:2|intcomma|default:"—" }}</td>
-                <td class="text-end fw-bold text-danger">{{ d.discrepancy_amount|floatformat:2|intcomma }}</td>
-                <td>
-                    {% if d.reason == 'amount_mismatch' %}<span class="badge bg-danger">Сумма</span>
-                    {% elif d.reason == 'missing_doc' %}<span class="badge bg-warning text-dark">Нет документа</span>
-                    {% elif d.reason == 'date_mismatch' %}<span class="badge bg-info text-dark">Дата</span>
-                    {% else %}<span class="badge bg-secondary">{{ d.get_reason_display }}</span>{% endif %}
-                </td>
-                <td>
-                    {% if d.status == 'open' %}<span class="badge bg-danger">Открыто</span>
-                    {% elif d.status == 'in_progress' %}<span class="badge bg-warning text-dark">В работе</span>
-                    {% elif d.status == 'resolved' %}<span class="badge bg-success">Закрыто</span>
-                    {% endif %}
-                </td>
-                <td><small>{{ d.responsible|default:"—" }}</small></td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="8" class="text-center py-4">
-                    <i class="bi bi-check-circle text-success fs-3 d-block mb-2"></i>
-                    <span class="text-muted">Расхождений нет</span>
-                </td>
-            </tr>
-            {% endfor %}
-            </tbody>
-        </table>
+{% block content %}
+<div class="page-content" style="padding:0 24px 24px">
+
+  <div class="page-head" style="margin:0 -24px 14px;padding:14px 24px;border-radius:0">
+    <div>
+      <h1 class="ph-title" style="margin:0">Расхождения при сверке</h1>
+      <div class="ph-sub">
+        <span class="live-dot"></span>
+        Контроль урегулирования расхождений с контрагентами
+      </div>
     </div>
+    <div class="page-head-r">
+      {% if user.is_admin or user.is_accountant %}
+      <a href="{% url 'reconciliation:generate_act' %}" class="btn btn-primary btn-sm">
+        <i class="bi bi-plus-lg"></i> Сформировать акт
+      </a>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card">
+    <table class="tbl-clean">
+      <thead>
+        <tr>
+          <th>Контрагент</th>
+          <th>Документ</th>
+          <th class="r">Наша сумма</th>
+          <th class="r">Их сумма</th>
+          <th class="r">Расхождение</th>
+          <th>Причина</th>
+          <th>Статус</th>
+          <th>Ответственный</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for d in discrepancies %}
+        <tr onclick="window.location='{% url 'reconciliation:discrepancy_detail' d.pk %}'"
+            class="{% if d.status == 'open' %}row-bad{% elif d.status == 'in_progress' %}row-warn{% endif %}">
+          <td>
+            <div class="cp">
+              <div class="cp-mark" style="background:{% if d.status == 'open' %}var(--bad){% else %}var(--info){% endif %};width:22px;height:22px;font-size:9px">
+                {{ d.counterparty.name|slice:":2"|upper }}
+              </div>
+              <div class="cp-name" style="font-size:12px">{{ d.counterparty.name|truncatechars:24 }}</div>
+            </div>
+          </td>
+          <td class="mono" style="font-size:11.5px;color:var(--text-2)">{{ d.document_ref|truncatechars:20 }}</td>
+          <td class="r mono">{{ d.our_amount|floatformat:0|intcomma }}</td>
+          <td class="r mono" style="color:var(--text-2)">{% if d.their_amount %}{{ d.their_amount|floatformat:0|intcomma }}{% else %}—{% endif %}</td>
+          <td class="r mono" style="font-weight:600;color:var(--bad)">{{ d.discrepancy_amount|floatformat:0|intcomma }}</td>
+          <td>
+            {% if d.reason == 'amount_mismatch' %}<span class="chip chip-bad">Сумма</span>
+            {% elif d.reason == 'missing_doc' %}<span class="chip chip-warn">Нет документа</span>
+            {% elif d.reason == 'date_mismatch' %}<span class="chip chip-info">Дата</span>
+            {% else %}<span class="chip" style="background:var(--surface-2);color:var(--text-2)">{{ d.get_reason_display }}</span>{% endif %}
+          </td>
+          <td>
+            {% if d.status == 'open' %}<span class="chip chip-bad"><i class="bi bi-exclamation-circle"></i>Открыто</span>
+            {% elif d.status == 'in_progress' %}<span class="chip chip-warn"><i class="bi bi-clock"></i>В работе</span>
+            {% elif d.status == 'resolved' %}<span class="chip chip-ok"><i class="bi bi-check2"></i>Закрыто</span>
+            {% endif %}
+          </td>
+          <td style="font-size:11.5px;color:var(--text-2)">{{ d.responsible|default:"—" }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text-3)">
+          <i class="bi bi-check-circle" style="font-size:24px;display:block;margin-bottom:8px;color:var(--ok)"></i>
+          Расхождений нет — все сверки сходятся
+        </td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% include "partials/_pagination.html" %}
+
 </div>
 {% endblock %}

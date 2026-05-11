@@ -1,50 +1,77 @@
 {% extends "base.html" %}
 {% block title %}Генератор отчётов{% endblock %}
+{% block breadcrumbs %}
+  <a href="#">Инструменты</a> <i class="bi bi-chevron-right sep" style="font-size:11px"></i>
+  <b>Отчёты</b>
+{% endblock %}
+
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="page-content" style="padding:0 24px 24px">
+
+  <div class="page-head" style="margin:0 -24px 14px;padding:14px 24px;border-radius:0">
     <div>
-        <h2 class="mb-0">Генератор отчётов</h2>
-        <small class="text-muted">Формирование и экспорт отчётов</small>
+      <h1 class="ph-title" style="margin:0">Генератор отчётов</h1>
+      <div class="ph-sub"><span class="live-dot"></span>Формирование и экспорт в PDF / Excel</div>
     </div>
-    <a href="{% url 'reports:history' %}" class="btn btn-outline-secondary btn-sm">
-        <i class="bi bi-clock-history me-1"></i>История
-    </a>
-</div>
+    <div class="page-head-r">
+      <a href="{% url 'reports:history' %}" class="btn btn-outline-primary btn-sm">
+        <i class="bi bi-clock-history"></i> История
+      </a>
+    </div>
+  </div>
 
-<div class="card">
-    <div class="card-body">
+  <div class="bento" style="padding:0">
+    <div class="card span-2">
+      <div class="card-h">
+        <div class="card-h-l"><i class="bi bi-file-earmark-arrow-down ico" style="color:var(--accent)"></i>Параметры отчёта</div>
+      </div>
+      <div style="padding:18px">
         <form method="post">
-            {% csrf_token %}
-            <div class="row g-3">
-                {% for field in form %}
-                <div class="col-md-6">
-                    <label class="form-label">{{ field.label }}</label>
-                    {{ field }}
-                    {% if field.errors %}<div class="text-danger small mt-1">{{ field.errors.0 }}</div>{% endif %}
-                </div>
-                {% endfor %}
+          {% csrf_token %}
+          <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px">
+            {% for field in form %}
+            <div>
+              <label class="form-label">{{ field.label }}</label>
+              {{ field }}
+              {% if field.help_text %}<div style="font-size:11px;color:var(--text-3);margin-top:4px">{{ field.help_text }}</div>{% endif %}
+              {% if field.errors %}<div style="font-size:11px;color:var(--bad);margin-top:4px">{{ field.errors.0 }}</div>{% endif %}
             </div>
-            {% if form.non_field_errors %}
-            <div class="alert alert-danger mt-3">{{ form.non_field_errors.0 }}</div>
-            {% endif %}
-            <div class="mt-4">
-                <button type="submit" class="btn btn-primary">
-                    <i class="bi bi-download me-1"></i>Сформировать и скачать
-                </button>
-            </div>
+            {% endfor %}
+          </div>
+          {% if form.non_field_errors %}
+          <div class="alert alert-danger" style="margin-top:14px">{{ form.non_field_errors.0 }}</div>
+          {% endif %}
+          <div style="margin-top:18px;display:flex;gap:8px">
+            <button type="submit" class="btn btn-primary">
+              <i class="bi bi-download"></i> Сформировать и скачать
+            </button>
+          </div>
         </form>
+      </div>
     </div>
-</div>
 
+    <div class="card">
+      <div class="card-h"><div class="card-h-l"><i class="bi bi-info-circle ico"></i>Доступные отчёты</div></div>
+      <div style="padding:14px;font-size:12px;color:var(--text-2);line-height:1.6">
+        <div style="margin-bottom:10px"><b style="color:var(--text)">Реестр задолженности</b> — все долги по срокам</div>
+        <div style="margin-bottom:10px"><b style="color:var(--text)">Платёжный календарь</b> — план платежей</div>
+        <div style="margin-bottom:10px"><b style="color:var(--text)">Структура закупок</b> — анализ по поставщикам</div>
+        <div><b style="color:var(--text)">Акт сверки</b> — для конкретного контрагента</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
 <script>
 function updateDateTo() {
     var dateFrom = document.getElementById('id_date_from');
     var dateTo = document.getElementById('id_date_to');
     if (dateFrom && dateTo && dateFrom.value) {
         dateTo.min = dateFrom.value;
-        if (dateTo.value && dateTo.value < dateFrom.value) {
-            dateTo.value = dateFrom.value;
-        }
+        if (dateTo.value && dateTo.value < dateFrom.value) dateTo.value = dateFrom.value;
     }
 }
 document.addEventListener('DOMContentLoaded', updateDateTo);

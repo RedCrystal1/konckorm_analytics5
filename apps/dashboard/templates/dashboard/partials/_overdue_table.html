@@ -1,47 +1,53 @@
 {% load humanize %}
-<table class="table table-hover mb-0">
-    <thead>
-        <tr>
-            <th>Контрагент</th>
-            <th>Документ</th>
-            <th>Срок оплаты</th>
-            <th class="text-end">Сумма</th>
-            <th class="text-end">Дней просрочки</th>
-            <th>Статус</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for r in overdue_top %}
-        <tr onclick="window.location='{% url 'counterparties:detail' r.counterparty.pk %}'" style="cursor:pointer"
-            class="{% if r.overdue_days > 60 %}table-danger{% elif r.overdue_days > 30 %}table-warning{% endif %}">
-            <td>
-                <div class="fw-semibold">{{ r.counterparty.name|truncatechars:28 }}</div>
-                {% if r.counterparty.is_key_supplier %}<span class="badge bg-warning text-dark" style="font-size:0.65rem"><i class="bi bi-star-fill me-1"></i>Ключевой</span>{% endif %}
-            </td>
-            <td><code class="text-muted">{{ r.source_document.number }}</code></td>
-            <td>{{ r.planned_payment_date|date:"d.m.Y" }}</td>
-            <td class="text-end fw-semibold">{{ r.amount_rub|floatformat:0|intcomma }} ₽</td>
-            <td class="text-end">
-                <span class="fw-bold {% if r.overdue_days > 60 %}text-danger{% elif r.overdue_days > 30 %}text-warning{% else %}text-muted{% endif %}">
-                    {{ r.overdue_days }} дн.
-                </span>
-            </td>
-            <td>
-                {% if r.status == 'overdue_30' %}<span class="badge bg-warning text-dark">до 30 дн.</span>
-                {% elif r.status == 'overdue_60' %}<span class="badge bg-warning text-dark">30–60 дн.</span>
-                {% elif r.status == 'overdue_90' %}<span class="badge bg-danger">60–90 дн.</span>
-                {% elif r.status == 'overdue_90_plus' %}<span class="badge bg-danger">90+ дн.</span>
-                {% elif r.status == 'doubtful' %}<span class="badge bg-dark">Сомнит.</span>
-                {% endif %}
-            </td>
-        </tr>
-        {% empty %}
-        <tr>
-            <td colspan="6" class="text-center py-4">
-                <i class="bi bi-check-circle text-success fs-3 d-block mb-2"></i>
-                <span class="text-muted">Просроченных платежей нет</span>
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
+<table class="tbl-clean">
+  <thead>
+    <tr>
+      <th>Контрагент</th>
+      <th>Документ</th>
+      <th>Срок</th>
+      <th class="r">Сумма</th>
+      <th class="r">Дни</th>
+      <th>Статус</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for r in overdue_top %}
+    <tr onclick="window.location='{% url 'counterparties:detail' r.counterparty.pk %}'">
+      <td>
+        <div class="cp">
+          <div class="cp-mark" style="background:{% if r.overdue_days > 60 %}var(--bad){% elif r.overdue_days > 30 %}var(--warn){% else %}var(--info){% endif %}">{{ r.counterparty.name|slice:":2"|upper }}</div>
+          <div>
+            <div class="cp-name">
+              {% if r.counterparty.is_key_supplier %}<span class="star">★</span>{% endif %}{{ r.counterparty.name|truncatechars:32 }}
+            </div>
+            {% if r.counterparty.inn %}<div class="cp-inn">ИНН {{ r.counterparty.inn }}</div>{% endif %}
+          </div>
+        </div>
+      </td>
+      <td>
+        <div class="mono" style="font-size:11.5px">{{ r.source_document.number }}</div>
+      </td>
+      <td class="mono" style="font-size:11.5px;color:var(--text-2)">{{ r.planned_payment_date|date:"d.m.Y" }}</td>
+      <td class="r mono"><b>{{ r.amount_rub|floatformat:0|intcomma }} ₽</b></td>
+      <td class="r mono" style="font-weight:600;color:{% if r.overdue_days > 60 %}var(--bad){% elif r.overdue_days > 30 %}var(--warn){% else %}var(--text-2){% endif %}">
+        {{ r.overdue_days }}
+      </td>
+      <td>
+        {% if r.status == 'overdue_30' %}<span class="chip chip-warn"><i class="bi bi-clock"></i>до 30 дн</span>
+        {% elif r.status == 'overdue_60' %}<span class="chip chip-warn"><i class="bi bi-clock"></i>30–60 дн</span>
+        {% elif r.status == 'overdue_90' %}<span class="chip chip-bad"><i class="bi bi-exclamation-circle"></i>60–90 дн</span>
+        {% elif r.status == 'overdue_90_plus' %}<span class="chip chip-bad"><i class="bi bi-exclamation-octagon"></i>90+ дн</span>
+        {% elif r.status == 'doubtful' %}<span class="chip" style="background:#1f2937;color:#fff"><i class="bi bi-x-octagon"></i>Сомнит.</span>
+        {% endif %}
+      </td>
+    </tr>
+    {% empty %}
+    <tr>
+      <td colspan="6" style="text-align:center;padding:30px;color:var(--text-3)">
+        <i class="bi bi-check-circle" style="color:var(--ok);font-size:24px;display:block;margin-bottom:6px"></i>
+        Просроченных платежей нет
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
 </table>

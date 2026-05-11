@@ -1,141 +1,173 @@
 {% extends "base.html" %}
 {% load humanize %}
 {% block title %}Структура закупок{% endblock %}
+{% block breadcrumbs %}
+  <a href="#">Анализ</a> <i class="bi bi-chevron-right sep" style="font-size:11px"></i>
+  <b>Структура закупок</b>
+{% endblock %}
+
 {% block content %}
-<h2>Структура закупок по поставщикам</h2>
+<div class="page-content" style="padding:0 24px 24px">
 
-<!-- Фильтр по виду -->
-<div class="d-flex gap-2 my-3">
-    <a href="{% url 'analytics:procurement' %}" class="btn btn-sm {% if not kind_filter %}btn-primary{% else %}btn-outline-primary{% endif %}">Все</a>
-    <a href="?kind=raw" class="btn btn-sm {% if kind_filter == 'raw' %}btn-primary{% else %}btn-outline-primary{% endif %}">Сырьё</a>
-    <a href="?kind=material" class="btn btn-sm {% if kind_filter == 'material' %}btn-primary{% else %}btn-outline-primary{% endif %}">Материалы</a>
-    <a href="?kind=service" class="btn btn-sm {% if kind_filter == 'service' %}btn-primary{% else %}btn-outline-primary{% endif %}">Услуги</a>
-</div>
+  <div class="page-head" style="margin:0 -24px 14px;padding:14px 24px;border-radius:0">
+    <div>
+      <h1 class="ph-title" style="margin:0">Структура закупок</h1>
+      <div class="ph-sub">
+        <span class="live-dot"></span>
+        Анализ закупок по поставщикам и видам
+      </div>
+    </div>
+  </div>
 
-<div class="row">
-    <!-- Диаграмма по видам -->
-    <div class="col-lg-5">
-        <div class="card mb-3">
-            <div class="card-header"><strong>Структура по видам закупок</strong></div>
-            <div class="card-body">
-                {% if kind_chart %}
-                <canvas id="kindPieChart" height="250"></canvas>
-                {% else %}
-                <p class="text-muted">Нет данных</p>
-                {% endif %}
-            </div>
-        </div>
+  {# Фильтр по виду #}
+  <div class="card" style="margin-bottom:14px">
+    <div class="filter-bar">
+      <a href="{% url 'analytics:procurement' %}" class="filter-chip {% if not kind_filter %}is-active{% endif %}">
+        <i class="bi bi-circle-fill" style="font-size:7px"></i>Все
+      </a>
+      <a href="?kind=raw" class="filter-chip {% if kind_filter == 'raw' %}is-active{% endif %}">
+        <i class="bi bi-egg"></i>Сырьё
+      </a>
+      <a href="?kind=material" class="filter-chip {% if kind_filter == 'material' %}is-active{% endif %}">
+        <i class="bi bi-box-seam"></i>Материалы
+      </a>
+      <a href="?kind=service" class="filter-chip {% if kind_filter == 'service' %}is-active{% endif %}">
+        <i class="bi bi-tools"></i>Услуги
+      </a>
+    </div>
+  </div>
+
+  <div class="bento" style="padding:0">
+    <div class="card span-2">
+      <div class="card-h"><div class="card-h-l"><i class="bi bi-bar-chart-fill ico"></i>Топ поставщиков по объёму</div></div>
+      {% if volumes %}
+      <div class="chart-wrap" style="height:300px;padding:14px;position:relative">
+        <canvas id="supplierBarChart"></canvas>
+      </div>
+      {% else %}
+      <div style="padding:40px;text-align:center;color:var(--text-3)">Нет данных</div>
+      {% endif %}
+    </div>
+    <div class="card">
+      <div class="card-h"><div class="card-h-l"><i class="bi bi-pie-chart-fill ico"></i>По видам закупок</div></div>
+      {% if kind_chart %}
+      <div class="chart-wrap" style="height:300px;padding:14px;position:relative">
+        <canvas id="kindPieChart"></canvas>
+      </div>
+      {% else %}
+      <div style="padding:40px;text-align:center;color:var(--text-3)">Нет данных</div>
+      {% endif %}
     </div>
 
-    <!-- Диаграмма топ поставщиков -->
-    <div class="col-lg-7">
-        <div class="card mb-3">
-            <div class="card-header"><strong>Топ поставщиков по объёму</strong></div>
-            <div class="card-body">
-                {% if volumes %}
-                <canvas id="supplierBarChart" height="250"></canvas>
-                {% else %}
-                <p class="text-muted">Нет данных</p>
-                {% endif %}
-            </div>
-        </div>
+    <div class="card span-3">
+      <div class="card-h">
+        <div class="card-h-l"><i class="bi bi-table ico"></i>Детализация</div>
+        <div class="card-h-r"><span class="meta">{{ volumes|length }} запис{{ volumes|length|pluralize:"ь,и,ей" }}</span></div>
+      </div>
+      <table class="tbl-clean">
+        <thead>
+          <tr>
+            <th>Поставщик</th>
+            <th>Период</th>
+            <th>Вид закупок</th>
+            <th class="r">Объём</th>
+            <th class="r">Доля</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for v in volumes %}
+          <tr onclick="window.location='{% url 'counterparties:detail' v.counterparty.pk %}'">
+            <td>
+              <div class="cp">
+                <div class="cp-mark" style="background:{% if v.counterparty.is_key_supplier %}var(--purple){% else %}var(--info){% endif %};width:22px;height:22px;font-size:9px">
+                  {{ v.counterparty.name|slice:":2"|upper }}
+                </div>
+                <div class="cp-name" style="font-size:12px">
+                  {% if v.counterparty.is_key_supplier %}<span class="star">★</span>{% endif %}{{ v.counterparty.name|truncatechars:32 }}
+                </div>
+              </div>
+            </td>
+            <td class="mono" style="font-size:11px;color:var(--text-2)">{{ v.period_start|date:"d.m.Y" }} — {{ v.period_end|date:"d.m.Y" }}</td>
+            <td>
+              {% if v.procurement_kind == 'raw' %}<span class="chip chip-ok">Сырьё</span>
+              {% elif v.procurement_kind == 'material' %}<span class="chip chip-info">Материалы</span>
+              {% elif v.procurement_kind == 'service' %}<span class="chip" style="background:var(--surface-2);color:var(--text-2)">Услуги</span>
+              {% else %}{{ v.procurement_kind }}{% endif %}
+            </td>
+            <td class="r mono"><b>{{ v.volume_rub|floatformat:0|intcomma }} ₽</b></td>
+            <td class="r mono">{{ v.share_percent|floatformat:1 }}%</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="5" style="text-align:center;padding:40px;color:var(--text-3)">
+            <i class="bi bi-cart" style="font-size:24px;display:block;margin-bottom:8px"></i>
+            Нет данных по закупкам
+          </td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
     </div>
-</div>
+  </div>
 
-<!-- Таблица -->
-<div class="card">
-    <div class="card-header"><strong>Детализация</strong></div>
-    <div class="card-body p-0">
-        <table class="table table-hover table-sm mb-0">
-            <thead>
-                <tr>
-                    <th>Поставщик</th>
-                    <th>Период</th>
-                    <th>Вид закупок</th>
-                    <th class="text-end">Объём (руб.)</th>
-                    <th class="text-end">Доля (%)</th>
-                </tr>
-            </thead>
-            <tbody>
-            {% for v in volumes %}
-            <tr>
-                <td>
-                    <a href="{% url 'counterparties:detail' v.counterparty.pk %}">{{ v.counterparty.name }}</a>
-                    {% if v.counterparty.is_key_supplier %}<span class="badge bg-warning text-dark">★</span>{% endif %}
-                </td>
-                <td>{{ v.period_start|date:"d.m.Y" }} — {{ v.period_end|date:"d.m.Y" }}</td>
-                <td>
-                    {% if v.procurement_kind == 'raw' %}<span class="badge bg-success">Сырьё</span>
-                    {% elif v.procurement_kind == 'material' %}<span class="badge bg-info text-dark">Материалы</span>
-                    {% elif v.procurement_kind == 'service' %}<span class="badge bg-secondary">Услуги</span>
-                    {% else %}{{ v.procurement_kind }}{% endif %}
-                </td>
-                <td class="text-end fw-bold">{{ v.volume_rub|floatformat:0|intcomma }}</td>
-                <td class="text-end">{{ v.share_percent|floatformat:1 }}%</td>
-            </tr>
-            {% empty %}
-            <tr><td colspan="5" class="text-muted text-center py-3">Нет данных</td></tr>
-            {% endfor %}
-            </tbody>
-        </table>
-    </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
-{% if kind_chart %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Круговая диаграмма по видам
-    var kindData = {{ kind_chart|safe }};
-    new Chart(document.getElementById('kindPieChart'), {
-        type: 'doughnut',
-        data: {
-            labels: kindData.map(d => d.kind),
-            datasets: [{
-                data: kindData.map(d => d.total),
-                backgroundColor: ['#2C5AA0', '#E8A838', '#6C757D', '#28A745']
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: { position: 'bottom' },
-                tooltip: { callbacks: { label: function(ctx) {
-                    var total = ctx.dataset.data.reduce((a,b) => a+b, 0);
-                    var pct = (ctx.raw / total * 100).toFixed(1);
-                    return ctx.label + ': ' + new Intl.NumberFormat('ru-RU').format(ctx.raw) + ' ₽ (' + pct + '%)';
-                }}}
-            }
+  if (typeof Chart === 'undefined') return;
+
+  {% if kind_chart %}
+  // Круговая по видам
+  var kindData = {{ kind_chart|safe }};
+  new Chart(document.getElementById('kindPieChart'), {
+    type: 'doughnut',
+    data: {
+      labels: kindData.map(d => d.kind),
+      datasets: [{
+        data: kindData.map(d => d.total),
+        backgroundColor: ['#16a34a', '#2563eb', '#a1a1aa', '#7c3aed', '#d97706'],
+        borderWidth: 0
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      cutout: '60%',
+      plugins: {
+        legend: { position: 'bottom', labels: { font: { size: 11 }, usePointStyle: true, pointStyle: 'circle' } },
+        tooltip: {
+          backgroundColor: '#18181b', titleColor: '#fff', bodyColor: '#d4d4d8', padding: 8, cornerRadius: 5,
+          callbacks: { label: function(ctx) {
+            var total = ctx.dataset.data.reduce((a,b) => a+b, 0);
+            var pct = (ctx.raw / total * 100).toFixed(1);
+            return ctx.label + ': ' + new Intl.NumberFormat('ru-RU').format(ctx.raw) + ' ₽ (' + pct + '%)';
+          }}
         }
-    });
+      }
+    }
+  });
+  {% endif %}
+
+  {% if volumes %}
+  // Горизонтальная по поставщикам
+  var labels = [{% for v in volumes %}"{{ v.counterparty.name|truncatechars:24 }}"{% if not forloop.last %},{% endif %}{% endfor %}];
+  var values = [{% for v in volumes %}{{ v.volume_rub }}{% if not forloop.last %},{% endif %}{% endfor %}];
+  new Chart(document.getElementById('supplierBarChart'), {
+    type: 'bar',
+    data: { labels: labels, datasets: [{ data: values, backgroundColor: '#2563eb', borderRadius: 4 }] },
+    options: {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { backgroundColor: '#18181b', titleColor: '#fff', bodyColor: '#d4d4d8', padding: 8, cornerRadius: 5,
+          callbacks: { label: c => new Intl.NumberFormat('ru-RU').format(c.raw) + ' ₽' } }
+      },
+      scales: {
+        x: { grid: { color: '#f1f1f1' }, border: { display: false }, ticks: { color: '#a1a1aa', font: { size: 10 }, callback: v => (v/1000).toFixed(0) + ' тыс.' } },
+        y: { grid: { display: false }, border: { display: false }, ticks: { color: '#a1a1aa', font: { size: 10 } } }
+      }
+    }
+  });
+  {% endif %}
 });
 </script>
-{% endif %}
-{% if volumes %}
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Горизонтальная диаграмма топ поставщиков
-    var labels = [{% for v in volumes %}"{{ v.counterparty.name|truncatechars:20 }}"{% if not forloop.last %},{% endif %}{% endfor %}];
-    var values = [{% for v in volumes %}{{ v.volume_rub }}{% if not forloop.last %},{% endif %}{% endfor %}];
-    new Chart(document.getElementById('supplierBarChart'), {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'Объём закупок (руб.)',
-                data: values,
-                backgroundColor: '#2C5AA0'
-            }]
-        },
-        options: {
-            indexAxis: 'y',
-            responsive: true,
-            plugins: { legend: { display: false } },
-            scales: { x: { ticks: { callback: v => (v/1000).toFixed(0) + ' тыс.' } } }
-        }
-    });
-});
-</script>
-{% endif %}
 {% endblock %}

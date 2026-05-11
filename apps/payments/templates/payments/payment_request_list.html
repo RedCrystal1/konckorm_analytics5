@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}Заявки на оплату{% endblock %}
+{% block breadcrumbs %}
+  <a href="{% url 'dashboard:home' %}">Главная</a>
+  <i class="bi bi-chevron-right sep" style="font-size:11px"></i>
+  <b>Заявки на оплату</b>
+{% endblock %}
+
+{% block content %}
+<div class="page-content" style="padding:0 24px 24px">
+
+  {# Заголовок страницы #}
+  <div class="page-head" style="margin:0 -24px 14px;padding:14px 24px;border-radius:0">
+    <div>
+      <h1 class="ph-title" style="margin:0">Заявки на оплату</h1>
+      <div class="ph-sub">
+        <span class="live-dot"></span>
+        Workflow согласования платежей · Менеджер → Бухгалтер → 1С
+      </div>
+    </div>
+    <div class="page-head-r">
+      {% if role == "manager" or role == "admin" %}
+        <a href="{% url 'payments:request_create' %}" class="btn btn-primary btn-sm">
+          <i class="bi bi-plus-lg"></i> Новая заявка
+        </a>
+      {% endif %}
+    </div>
+  </div>
+
+  {# ─── Фильтры-чипы по статусам ───────────────────────────── #}
+  <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;align-items:center">
+    <a href="{% url 'payments:request_list' %}"
+       class="chip {% if not status_filter %}chip-info{% endif %}"
+       style="text-decoration:none;cursor:pointer;{% if status_filter %}background:var(--surface-2);color:var(--text-2){% endif %}">
+      Все <b style="margin-left:4px">{{ counts.total }}</b>
+    </a>
+
+    <a href="?status=draft{% if search %}&search={{ search }}{% endif %}"
+       class="chip"
+       style="text-decoration:none;cursor:pointer;{% if status_filter == 'draft' %}background:var(--info-soft);color:var(--info){% else %}background:var(--surface-2);color:var(--text-2){% endif %}">
+      <i class="bi bi-pencil"></i> Черновики <b style="margin-left:4px">{{ counts.draft }}</b>
+    </a>
+
+    <a href="?status=submitted{% if search %}&search={{ search }}{% endif %}"
+       class="chip"
+       style="text-decoration:none;cursor:pointer;{% if status_filter == 'submitted' %}background:var(--warn-soft);color:var(--warn){% else %}background:var(--surface-2);color:var(--text-2){% endif %}">
+      <i class="bi bi-clock"></i> На согласовании <b style="margin-left:4px">{{ counts.submitted }}</b>
+    </a>
+
+    <a href="?status=approved{% if search %}&search={{ search }}{% endif %}"
+       class="chip"
+       style="text-decoration:none;cursor:pointer;{% if status_filter == 'approved' %}background:var(--info-soft);color:var(--info){% else %}background:var(--surface-2);color:var(--text-2){% endif %}">
+      <i class="bi bi-check2"></i> Одобрено <b style="margin-left:4px">{{ counts.approved }}</b>
+    </a>
+
+    <a href="?status=rejected{% if search %}&search={{ search }}{% endif %}"
+       class="chip"
+       style="text-decoration:none;cursor:pointer;{% if status_filter == 'rejected' %}background:var(--bad-soft);color:var(--bad){% else %}background:var(--surface-2);color:var(--text-2){% endif %}">
+      <i class="bi bi-x-circle"></i> Отклонено <b style="margin-left:4px">{{ counts.rejected }}</b>
+    </a>
+
+    <a href="?status=sent_to_1c{% if search %}&search={{ search }}{% endif %}"
+       class="chip"
+       style="text-decoration:none;cursor:pointer;{% if status_filter == 'sent_to_1c' %}background:var(--ok-soft);color:var(--ok){% else %}background:var(--surface-2);color:var(--text-2){% endif %}">
+      <i class="bi bi-cloud-check"></i> В 1С <b style="margin-left:4px">{{ counts.sent_to_1c }}</b>
+    </a>
+
+    <a href="?status=posted_in_1c{% if search %}&search={{ search }}{% endif %}"
+       class="chip"
+       style="text-decoration:none;cursor:pointer;{% if status_filter == 'posted_in_1c' %}background:var(--ok-soft);color:var(--ok){% else %}background:var(--surface-2);color:var(--text-2){% endif %}">
+      <i class="bi bi-check-circle-fill"></i> Проведено <b style="margin-left:4px">{{ counts.posted_in_1c }}</b>
+    </a>
+
+    {# Поиск справа #}
+    <form method="get" style="margin-left:auto;display:flex;gap:6px">
+      {% if status_filter %}<input type="hidden" name="status" value="{{ status_filter }}">{% endif %}
+      <input type="text" name="search" value="{{ search }}"
+             placeholder="Поиск по контрагенту, №..."
+             style="height:30px;padding:0 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;min-width:240px">
+      <button type="submit" class="btn btn-outline-primary btn-sm">
+        <i class="bi bi-search"></i>
+      </button>
+    </form>
+  </div>
+
+  {# ─── Таблица заявок ─────────────────────────────────────── #}
+  <div class="card" style="padding:0">
+    {% if requests %}
+    <table class="tbl-clean">
+      <thead>
+        <tr>
+          <th>№</th>
+          <th>Контрагент</th>
+          <th>Договор / Поступление</th>
+          <th>Назначение</th>
+          <th class="r">Сумма</th>
+          <th>План. дата</th>
+          <th>Статус</th>
+          <th>Создал</th>
+          <th>Создано</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in requests %}
+        <tr onclick="window.location='{% url 'payments:request_detail' r.pk %}'">
+          <td class="mono" style="font-size:11.5px;font-weight:500">#{{ r.pk }}</td>
+          <td>
+            <div style="font-size:12.5px;font-weight:500">{{ r.counterparty.name|truncatechars:28 }}</div>
+            <div style="font-size:10.5px;color:var(--text-3)">ИНН {{ r.counterparty.inn }}</div>
+          </td>
+          <td>
+            {% if r.contract %}
+              <div style="font-size:11.5px">№{{ r.contract.number }}</div>
+            {% endif %}
+            {% if r.related_receipt %}
+              <div style="font-size:10.5px;color:var(--text-3)">
+                <i class="bi bi-files"></i> {{ r.related_receipt.number }}
+              </div>
+            {% endif %}
+          </td>
+          <td style="max-width:240px">
+            <div style="font-size:11.5px;color:var(--text-2);white-space:nowrap;text-overflow:ellipsis;overflow:hidden">
+              {{ r.purpose|truncatechars:50 }}
+            </div>
+          </td>
+          <td class="r mono">
+            <b style="font-size:13px">{{ r.amount|floatformat:0|intcomma }} ₽</b>
+          </td>
+          <td class="mono" style="font-size:11px;color:var(--text-2)">
+            {{ r.planned_date|date:"d.m.y" }}
+          </td>
+          <td>
+            {% if r.status == "draft" %}
+              <span class="chip" style="background:var(--surface-2);color:var(--text-2)">
+                <i class="bi bi-pencil"></i> Черновик
+              </span>
+            {% elif r.status == "submitted" %}
+              <span class="chip chip-warn">
+                <i class="bi bi-clock"></i> На согласовании
+              </span>
+            {% elif r.status == "approved" %}
+              <span class="chip chip-info">
+                <i class="bi bi-check2"></i> Одобрено
+              </span>
+            {% elif r.status == "rejected" %}
+              <span class="chip chip-bad">
+                <i class="bi bi-x-circle"></i> Отклонено
+              </span>
+            {% elif r.status == "sent_to_1c" %}
+              <span class="chip chip-ok">
+                <i class="bi bi-cloud-check"></i> Отправлено в 1С
+              </span>
+            {% elif r.status == "posted_in_1c" %}
+              <span class="chip chip-ok">
+                <i class="bi bi-check-circle-fill"></i> Проведено
+              </span>
+            {% elif r.status == "cancelled" %}
+              <span class="chip" style="background:var(--surface-2);color:var(--text-3)">
+                <i class="bi bi-dash-circle"></i> Отменено
+              </span>
+            {% endif %}
+          </td>
+          <td style="font-size:11px;color:var(--text-2)">
+            {{ r.created_by.get_full_name|default:r.created_by.username|truncatechars:18 }}
+          </td>
+          <td class="mono" style="font-size:10.5px;color:var(--text-3)">
+            {{ r.created_at|date:"d.m H:i" }}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    {# Пагинация #}
+    {% if page_obj.has_other_pages %}
+    <div style="padding:14px;display:flex;justify-content:center;gap:6px;border-top:1px solid var(--border)">
+      {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if search %}&search={{ search }}{% endif %}"
+           class="btn btn-outline-primary btn-sm">←</a>
+      {% endif %}
+      <span style="padding:6px 12px;color:var(--text-2);font-size:12px">
+        Стр. {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}
+      </span>
+      {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if search %}&search={{ search }}{% endif %}"
+           class="btn btn-outline-primary btn-sm">→</a>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div style="padding:60px;text-align:center;color:var(--text-3)">
+      <i class="bi bi-inbox" style="font-size:36px;display:block;margin-bottom:12px"></i>
+      <div style="font-size:14px;color:var(--text-2);margin-bottom:6px">Заявок не найдено</div>
+      {% if status_filter or search %}
+        <div style="font-size:12px">Попробуйте изменить параметры фильтра</div>
+        <a href="{% url 'payments:request_list' %}" class="btn-link" style="font-size:11.5px;margin-top:8px;display:inline-block">
+          Сбросить фильтры
+        </a>
+      {% else %}
+        {% if role == "manager" or role == "admin" %}
+        <div style="font-size:12px;margin-bottom:14px">Создайте первую заявку на оплату</div>
+        <a href="{% url 'payments:request_create' %}" class="btn btn-primary btn-sm">
+          <i class="bi bi-plus-lg"></i> Новая заявка
+        </a>
+        {% endif %}
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

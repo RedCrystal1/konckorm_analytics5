@@ -49,18 +49,28 @@ def discrepancy_update_status(request, pk):
     """Обновление статуса расхождения."""
     discrepancy = get_object_or_404(Discrepancy, pk=pk)
     if request.method == "POST":
-        form = DiscrepancyStatusForm(request.POST, instance=discrepancy)
+        form = DiscrepancyStatusForm(request.POST)
         if form.is_valid():
-            obj = form.save(commit=False)
-            if obj.status == Discrepancy.Status.RESOLVED:
+            new_status = form.cleaned_data["status"]
+            comment = form.cleaned_data.get("resolution_comment", "")
+
+            discrepancy.status = new_status
+            if comment:
+                discrepancy.resolution_comment = comment
+            if new_status == Discrepancy.Status.RESOLVED:
                 from django.utils import timezone
 
-                obj.resolved_at = timezone.now()
-            obj.save()
+                discrepancy.resolved_at = timezone.now()
+            discrepancy.save()
+
             messages.success(request, "Статус расхождения обновлён.")
             return redirect("reconciliation:discrepancy_detail", pk=pk)
     else:
-        form = DiscrepancyStatusForm(instance=discrepancy)
+        # Заполняем форму текущими данными расхождения
+        form = DiscrepancyStatusForm(initial={
+            "status": discrepancy.status,
+            "resolution_comment": discrepancy.resolution_comment or "",
+        })
     return render(
         request,
         "reconciliation/discrepancy_status_form.html",

@@ -1,61 +1,61 @@
 {% extends "base.html" %}
 {% block title %}Формирование акта сверки{% endblock %}
+{% block breadcrumbs %}
+  <a href="{% url 'reconciliation:discrepancy_list' %}">Сверки</a> <i class="bi bi-chevron-right sep" style="font-size:11px"></i>
+  <b>Новый акт</b>
+{% endblock %}
+
 {% block content %}
-<div class="mb-4">
-    <h2 class="mb-0">Формирование акта сверки</h2>
-    <small class="text-muted">Выберите контрагента и период — система автоматически рассчитает сальдо</small>
-</div>
+<div class="page-content" style="padding:0 24px 24px">
 
-<div class="row">
-    <div class="col-lg-7">
-        <div class="card">
-            <div class="card-header"><i class="bi bi-calculator me-2"></i><strong>Параметры сверки</strong></div>
-            <div class="card-body">
-                <form method="post">
-                    {% csrf_token %}
-                    {% for field in form %}
-                    <div class="mb-3">
-                        <label class="form-label">{{ field.label }}</label>
-                        {{ field }}
-                        {% if field.errors %}<div class="text-danger small mt-1">{{ field.errors.0 }}</div>{% endif %}
-                    </div>
-                    {% endfor %}
-                    {% if form.non_field_errors %}
-                    <div class="alert alert-danger">{{ form.non_field_errors.0 }}</div>
-                    {% endif %}
-                    <div class="d-flex gap-2 mt-4">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-check-lg me-1"></i>Сформировать
-                        </button>
-                        <a href="{% url 'reconciliation:discrepancy_list' %}" class="btn btn-outline-secondary">Отмена</a>
-                    </div>
-                </form>
-            </div>
-        </div>
+  <div class="page-head" style="margin:0 -24px 14px;padding:14px 24px;border-radius:0">
+    <div>
+      <h1 class="ph-title" style="margin:0">Формирование акта сверки</h1>
+      <div class="ph-sub"><span class="live-dot"></span>Выберите контрагента и период — система рассчитает сальдо</div>
+    </div>
+  </div>
+
+  <div class="bento" style="padding:0">
+    <div class="card span-2">
+      <div class="card-h"><div class="card-h-l"><i class="bi bi-calculator ico" style="color:var(--accent)"></i>Параметры сверки</div></div>
+      <div style="padding:18px">
+        <form method="post">{% csrf_token %}
+          {% for field in form %}
+          <div style="margin-bottom:14px">
+            <label class="form-label">{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}<div style="font-size:11px;color:var(--bad);margin-top:4px">{{ field.errors.0 }}</div>{% endif %}
+          </div>
+          {% endfor %}
+          {% if form.non_field_errors %}
+          <div class="alert alert-danger">{{ form.non_field_errors.0 }}</div>
+          {% endif %}
+          <div style="display:flex;gap:8px;margin-top:18px">
+            <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Сформировать</button>
+            <a href="{% url 'reconciliation:discrepancy_list' %}" class="btn btn-outline-primary">Отмена</a>
+          </div>
+        </form>
+      </div>
     </div>
 
-    <div class="col-lg-5">
-        <div class="card">
-            <div class="card-header"><i class="bi bi-info-circle me-2"></i><strong>Как это работает</strong></div>
-            <div class="card-body" style="font-size:0.85rem">
-                <div class="d-flex align-items-start gap-2 mb-3">
-                    <span class="badge bg-primary rounded-circle" style="width:24px;height:24px;line-height:24px;text-align:center">1</span>
-                    <span class="text-muted">Система подсчитает <strong>наше сальдо</strong>: поступления минус оплаты за период</span>
-                </div>
-                <div class="d-flex align-items-start gap-2 mb-3">
-                    <span class="badge bg-primary rounded-circle" style="width:24px;height:24px;line-height:24px;text-align:center">2</span>
-                    <span class="text-muted">По неоплаченным документам автоматически создадутся <strong>расхождения</strong></span>
-                </div>
-                <div class="d-flex align-items-start gap-2 mb-3">
-                    <span class="badge bg-primary rounded-circle" style="width:24px;height:24px;line-height:24px;text-align:center">3</span>
-                    <span class="text-muted">Получите акт от контрагента и введите <strong>их сальдо</strong> на странице акта</span>
-                </div>
-                <div class="d-flex align-items-start gap-2">
-                    <span class="badge bg-primary rounded-circle" style="width:24px;height:24px;line-height:24px;text-align:center">4</span>
-                    <span class="text-muted">Система сверит данные и покажет итог: <span class="text-success">совпало</span> или <span class="text-danger">расхождение</span></span>
-                </div>
-            </div>
+    <div class="card">
+      <div class="card-h"><div class="card-h-l"><i class="bi bi-info-circle ico"></i>Как это работает</div></div>
+      <div style="padding:14px;font-size:12px">
+        {% for step in "1234" %}
+        <div style="display:flex;gap:10px;margin-bottom:14px;align-items:flex-start">
+          <span style="background:var(--text);color:#fff;border-radius:50%;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0">{{ forloop.counter }}</span>
+          <span style="color:var(--text-2);line-height:1.5;font-size:11.5px">
+            {% if forloop.counter == 1 %}Система подсчитает <b style="color:var(--text)">наше сальдо</b>: поступления минус оплаты за период
+            {% elif forloop.counter == 2 %}По неоплаченным документам автоматически создадутся <b style="color:var(--text)">расхождения</b>
+            {% elif forloop.counter == 3 %}Получите акт от контрагента и введите <b style="color:var(--text)">их сальдо</b> на странице акта
+            {% else %}Система сверит данные и покажет итог: <span style="color:var(--ok)">совпало</span> или <span style="color:var(--bad)">расхождение</span>
+            {% endif %}
+          </span>
         </div>
+        {% endfor %}
+      </div>
     </div>
+  </div>
+
 </div>
 {% endblock %}

@@ -1,73 +1,64 @@
 {% extends "base.html" %}
 {% load humanize %}
 {% block title %}История импортов{% endblock %}
-{% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h2 class="mb-0">История импортов</h2>
-        <small class="text-muted">Все сессии загрузки данных</small>
-    </div>
-    <a href="{% url 'data_import:upload' %}" class="btn btn-primary btn-sm">
-        <i class="bi bi-cloud-upload me-1"></i>Новый импорт
-    </a>
-</div>
+{% block breadcrumbs %}
+  <a href="#">Инструменты</a> <i class="bi bi-chevron-right sep" style="font-size:11px"></i>
+  <a href="{% url 'data_import:upload' %}">Импорт</a> <i class="bi bi-chevron-right sep" style="font-size:11px"></i>
+  <b>История</b>
+{% endblock %}
 
-<div class="card">
-    <div class="card-body p-0">
-        <table class="table table-hover mb-0">
-            <thead>
-                <tr>
-                    <th>#</th>
-                    <th>Дата</th>
-                    <th>Режим</th>
-                    <th>Формат</th>
-                    <th>Статус</th>
-                    <th class="text-center">Создано</th>
-                    <th class="text-center">Обновлено</th>
-                    <th class="text-center">Ошибок</th>
-                    <th class="text-center">Дублей</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
-            {% for s in sessions %}
-            <tr>
-                <td><code>{{ s.pk }}</code></td>
-                <td>
-                    <small>{{ s.created_at|date:"d.m.Y H:i" }}</small>
-                </td>
-                <td>{{ s.get_mode_display }}</td>
-                <td>
-                    {% if s.file_format == 'excel' %}<i class="bi bi-file-earmark-excel text-success me-1"></i>
-                    {% elif s.file_format == 'xml' %}<i class="bi bi-filetype-xml text-warning me-1"></i>
-                    {% endif %}{{ s.get_file_format_display }}
-                </td>
-                <td>
-                    {% if s.status == 'completed' %}<span class="badge bg-success">Завершён</span>
-                    {% elif s.status == 'processing' %}<span class="badge bg-primary">В процессе</span>
-                    {% elif s.status == 'failed' %}<span class="badge bg-danger">Ошибка</span>
-                    {% else %}<span class="badge bg-secondary">{{ s.get_status_display }}</span>{% endif %}
-                </td>
-                <td class="text-center"><span class="text-success fw-bold">{{ s.created_records }}</span></td>
-                <td class="text-center">{{ s.updated_records }}</td>
-                <td class="text-center">{% if s.error_records > 0 %}<span class="text-danger fw-bold">{{ s.error_records }}</span>{% else %}0{% endif %}</td>
-                <td class="text-center">{% if s.duplicates_found > 0 %}<span class="text-warning fw-bold">{{ s.duplicates_found }}</span>{% else %}0{% endif %}</td>
-                <td>
-                    <a href="{% url 'data_import:results' s.pk %}" class="btn btn-sm btn-outline-primary">
-                        <i class="bi bi-eye"></i>
-                    </a>
-                </td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="10" class="text-center py-4">
-                    <i class="bi bi-cloud-upload text-muted fs-3 d-block mb-2"></i>
-                    <span class="text-muted">Импортов ещё не было</span>
-                </td>
-            </tr>
-            {% endfor %}
-            </tbody>
-        </table>
+{% block content %}
+<div class="page-content" style="padding:0 24px 24px">
+  <div class="page-head" style="margin:0 -24px 14px;padding:14px 24px;border-radius:0">
+    <div>
+      <h1 class="ph-title" style="margin:0">История импортов</h1>
+      <div class="ph-sub"><span class="live-dot"></span>Все сессии загрузки данных · {{ sessions|length }} запис{{ sessions|length|pluralize:"ь,и,ей" }}</div>
     </div>
+    <div class="page-head-r">
+      <a href="{% url 'data_import:upload' %}" class="btn btn-primary btn-sm"><i class="bi bi-cloud-upload"></i> Новый импорт</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <table class="tbl-clean">
+      <thead>
+        <tr>
+          <th>#</th><th>Дата</th><th>Режим</th><th>Формат</th><th>Статус</th>
+          <th class="r">Создано</th><th class="r">Обновлено</th><th class="r">Ошибок</th><th class="r">Дублей</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for s in sessions %}
+        <tr>
+          <td class="mono" style="font-size:11px;color:var(--text-3)">#{{ s.pk }}</td>
+          <td class="mono" style="font-size:11.5px;color:var(--text-2)">{{ s.created_at|date:"d.m.Y H:i" }}</td>
+          <td style="font-size:12px">{{ s.get_mode_display }}</td>
+          <td>
+            {% if s.file_format == 'excel' %}<i class="bi bi-file-earmark-excel" style="color:var(--ok)"></i>
+            {% elif s.file_format == 'xml' %}<i class="bi bi-filetype-xml" style="color:var(--warn)"></i>
+            {% endif %}
+            <span style="font-size:12px;margin-left:4px">{{ s.get_file_format_display }}</span>
+          </td>
+          <td>
+            {% if s.status == 'completed' %}<span class="chip chip-ok"><i class="bi bi-check2"></i>Завершён</span>
+            {% elif s.status == 'processing' %}<span class="chip chip-info"><i class="bi bi-arrow-repeat"></i>В процессе</span>
+            {% elif s.status == 'failed' %}<span class="chip chip-bad"><i class="bi bi-x-circle"></i>Ошибка</span>
+            {% else %}<span class="chip" style="background:var(--surface-2);color:var(--text-2)">{{ s.get_status_display }}</span>{% endif %}
+          </td>
+          <td class="r mono" style="color:var(--ok);font-weight:600">{{ s.created_records }}</td>
+          <td class="r mono">{{ s.updated_records }}</td>
+          <td class="r mono" style="font-weight:{% if s.error_records > 0 %}600{% endif %};color:{% if s.error_records > 0 %}var(--bad){% else %}var(--text-3){% endif %}">{{ s.error_records }}</td>
+          <td class="r mono" style="font-weight:{% if s.duplicates_found > 0 %}600{% endif %};color:{% if s.duplicates_found > 0 %}var(--warn){% else %}var(--text-3){% endif %}">{{ s.duplicates_found }}</td>
+          <td><a href="{% url 'data_import:results' s.pk %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-eye"></i></a></td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="10" style="text-align:center;padding:40px;color:var(--text-3)">
+          <i class="bi bi-cloud-upload" style="font-size:24px;display:block;margin-bottom:8px"></i>
+          Импортов ещё не было
+        </td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </div>
 {% endblock %}

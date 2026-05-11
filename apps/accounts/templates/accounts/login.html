@@ -5,110 +5,181 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Вход — КонцКорма.Аналитика</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <style>
-        * { font-family: 'Inter', 'Segoe UI', sans-serif; }
-        body {
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: linear-gradient(135deg, #1a3a5c 0%, #2c5aa0 50%, #4a7fd4 100%);
-        }
-        .login-container { width: 100%; max-width: 420px; padding: 1rem; }
-        .login-card {
-            background: #fff;
-            border-radius: 16px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            overflow: hidden;
-        }
-        .login-header {
-            background: linear-gradient(135deg, #1a3a5c, #2c5aa0);
-            padding: 2rem;
-            text-align: center;
-            color: #fff;
-        }
-        .login-header h4 { font-weight: 700; margin-bottom: 0.25rem; }
-        .login-header p { opacity: 0.7; font-size: 0.9rem; margin: 0; }
-        .login-body { padding: 2rem; }
-        .login-icon {
-            width: 56px; height: 56px;
-            background: rgba(255,255,255,0.15);
-            border-radius: 14px;
-            display: flex; align-items: center; justify-content: center;
-            margin: 0 auto 1rem;
-            font-size: 1.5rem;
-        }
-        .form-control {
-            border-radius: 8px;
-            padding: 0.65rem 0.85rem;
-            border: 1px solid #cbd5e1;
-        }
-        .form-control:focus {
-            border-color: #4a7fd4;
-            box-shadow: 0 0 0 3px rgba(44,90,160,0.12);
-        }
-        .btn-login {
-            background: linear-gradient(135deg, #2c5aa0, #1a3a5c);
-            border: none;
-            border-radius: 8px;
-            padding: 0.7rem;
-            font-weight: 600;
-            font-size: 0.95rem;
-            box-shadow: 0 4px 12px rgba(44,90,160,0.4);
-            transition: all 0.2s;
-        }
-        .btn-login:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(44,90,160,0.5);
-        }
-        .footer-text {
-            text-align: center;
-            color: rgba(255,255,255,0.5);
-            font-size: 0.75rem;
-            margin-top: 1.5rem;
-        }
+      :root {
+        --bg: #fafafa;
+        --surface: #ffffff;
+        --surface-2: #f5f5f5;
+        --border: #e8e8e8;
+        --border-2: #d4d4d8;
+        --text: #18181b;
+        --text-2: #52525b;
+        --text-3: #a1a1aa;
+        --accent: #2563eb;
+        --bad: #dc2626;
+        --bad-soft: #fef2f2;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        font-size: 13.5px;
+        background: var(--bg);
+        color: var(--text);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      }
+      .lg-card {
+        width: 100%;
+        max-width: 380px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        box-shadow: 0 1px 3px rgba(0,0,0,.06), 0 10px 40px rgba(0,0,0,.04);
+        overflow: hidden;
+      }
+      .lg-h {
+        padding: 28px 28px 14px;
+        text-align: center;
+      }
+      .lg-icon {
+        width: 40px;
+        height: 40px;
+        background: #0a0a0a;
+        color: #fff;
+        border-radius: 10px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 16px;
+        margin-bottom: 14px;
+      }
+      .lg-h h1 {
+        margin: 0;
+        font-size: 17px;
+        font-weight: 600;
+        letter-spacing: -.02em;
+      }
+      .lg-h h1 span {
+        color: var(--text-3);
+        font-weight: 500;
+      }
+      .lg-h p {
+        margin: 4px 0 0;
+        font-size: 12px;
+        color: var(--text-2);
+      }
+      .lg-body {
+        padding: 14px 28px 28px;
+      }
+      .lg-error {
+        background: var(--bad-soft);
+        border: 1px solid #fecaca;
+        color: #7f1d1d;
+        padding: 8px 12px;
+        border-radius: 8px;
+        font-size: 12px;
+        margin-bottom: 14px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .lg-field { margin-bottom: 12px; }
+      .lg-field label {
+        display: block;
+        font-size: 11.5px;
+        font-weight: 500;
+        color: var(--text-2);
+        margin-bottom: 4px;
+      }
+      .lg-field input {
+        width: 100%;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 8px 12px;
+        font-size: 13px;
+        font-family: inherit;
+        color: var(--text);
+        background: var(--surface);
+        transition: all .15s;
+      }
+      .lg-field input:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(37,99,235,.12);
+        outline: none;
+      }
+      .lg-btn {
+        width: 100%;
+        background: var(--text);
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        padding: 10px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        margin-top: 6px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        font-family: inherit;
+        transition: background .12s;
+      }
+      .lg-btn:hover { background: #000; }
+      .lg-foot {
+        text-align: center;
+        font-size: 11px;
+        color: var(--text-3);
+        margin-top: 18px;
+      }
     </style>
 </head>
 <body>
-    <div class="login-container">
-        <div class="login-card">
-            <div class="login-header">
-                <div class="login-icon">
-                    <i class="bi bi-bar-chart-fill"></i>
-                </div>
-                <h4>КонцКорма<span style="opacity:0.7">.Аналитика</span></h4>
-                <p>Платформа учёта взаиморасчётов</p>
-            </div>
-            <div class="login-body">
-                {% if form.errors %}
-                <div class="alert alert-danger d-flex align-items-center py-2" style="border-radius:8px;font-size:0.85rem">
-                    <i class="bi bi-exclamation-circle me-2"></i>
-                    Неверный логин или пароль
-                </div>
-                {% endif %}
-                <form method="post">
-                    {% csrf_token %}
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold" style="font-size:0.85rem;color:#475569">Имя пользователя</label>
-                        {{ form.username }}
-                    </div>
-                    <div class="mb-4">
-                        <label class="form-label fw-semibold" style="font-size:0.85rem;color:#475569">Пароль</label>
-                        {{ form.password }}
-                    </div>
-                    <button type="submit" class="btn btn-primary btn-login w-100">
-                        <i class="bi bi-box-arrow-in-right me-1"></i> Войти
-                    </button>
-                    {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
-                </form>
-            </div>
+    <div>
+      <div class="lg-card">
+        <div class="lg-h">
+          <div class="lg-icon">К</div>
+          <h1>КонцКорма<span>.Аналитика</span></h1>
+          <p>Платформа учёта взаиморасчётов</p>
         </div>
-        <div class="footer-text">
-            &copy; 2026 АО «Концкорма» — Все права защищены
+        <div class="lg-body">
+          {% if form.errors %}
+          <div class="lg-error">
+            <i class="bi bi-exclamation-circle"></i>
+            Неверный логин или пароль
+          </div>
+          {% endif %}
+          <form method="post">
+            {% csrf_token %}
+            <div class="lg-field">
+              <label for="id_username">Имя пользователя</label>
+              {{ form.username }}
+            </div>
+            <div class="lg-field">
+              <label for="id_password">Пароль</label>
+              {{ form.password }}
+            </div>
+            <button type="submit" class="lg-btn">
+              <i class="bi bi-box-arrow-in-right"></i> Войти
+            </button>
+            {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+          </form>
         </div>
+      </div>
+      <div class="lg-foot">© 2026 АО «Концкорма»</div>
     </div>
+    <script>
+      // Применяем стиль к Django-инпутам формы
+      document.querySelectorAll('.lg-field input').forEach(i => {
+        i.style.width = '100%';
+      });
+    </script>
 </body>
 </html>
